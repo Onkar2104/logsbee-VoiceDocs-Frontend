@@ -59,5 +59,5 @@ npm run preview
 - Shared Axios client with configurable API base URL.
 - Bearer-token request support through `setAccessToken(token)`.
 - Token clearing through `clearAccessToken()`.
-- Current-user API function for `GET /api/v1/me`.
+- Current-user API function for `GET /api/me`.
 - Common API error-message extraction.
