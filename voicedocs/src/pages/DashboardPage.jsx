@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { FileText, Plus, Search, RefreshCw, Trash2, Clock3, Files } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../context/useAuth'
 import { createDocument, deleteDocument, fetchDocuments } from '../features/documents/documentsApi'
 
@@ -177,7 +178,9 @@ export default function DashboardPage() {
                       </button>
                     )}
                   </div>
-                  <h3>{document.title}</h3>
+                  <Link className="document-open-link" to={`/documents/${document.id}`} aria-label={`Open ${document.title}`}>
+                    <h3>{document.title}</h3>
+                  </Link>
                   <p className="document-preview">{document.content?.trim() || 'No content yet. Open this document to add your notes.'}</p>
                   <div className="document-card-footer"><span><Clock3 size={14} /> {formatDate(document.updated_at)}</span><span>{document.owner_user_id === user?.id ? 'Owned by you' : 'Shared with you'}</span></div>
                 </article>
