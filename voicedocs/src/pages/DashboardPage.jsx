@@ -44,11 +44,14 @@ export default function DashboardPage() {
     loadDocuments()
   }, [loadDocuments])
 
-  const filteredDocuments = useMemo(() => {
+  const { myDocuments, sharedDocuments } = useMemo(() => {
     const query = search.trim().toLowerCase()
-    if (!query) return documents
-    return documents.filter((document) => document.title?.toLowerCase().includes(query))
-  }, [documents, search])
+    const matchesSearch = (document) => !query || document.title?.toLowerCase().includes(query)
+    return {
+      myDocuments: documents.filter((document) => document.owner_user_id === user?.id).filter(matchesSearch),
+      sharedDocuments: documents.filter((document) => document.owner_user_id !== user?.id).filter(matchesSearch),
+    }
+  }, [documents, search, user?.id])
 
   async function handleCreate(event) {
     event.preventDefault()
@@ -159,33 +162,65 @@ export default function DashboardPage() {
 
           {isLoading ? (
             <div className="documents-state"><RefreshCw className="spin-icon" size={22} /><p>Loading your documents…</p></div>
-          ) : filteredDocuments.length === 0 ? (
-            <div className="documents-empty">
-              <span className="empty-icon"><Files size={25} /></span>
-              <h3>{search ? 'No matching documents' : 'Your workspace is ready'}</h3>
-              <p>{search ? 'Try a different search term.' : 'Create your first document to get started.'}</p>
-              {!search && <button className="primary-button empty-create-button" type="button" onClick={() => setIsCreating(true)}><Plus size={16} /> Create your first document</button>}
-            </div>
           ) : (
-            <div className="document-grid">
-              {filteredDocuments.map((document) => (
-                <article className="document-card" key={document.id}>
-                  <div className="document-card-top">
-                    <span className="document-icon"><FileText size={20} /></span>
-                    {(isAccountAdmin || document.owner_user_id === user?.id) && (
-                      <button className="icon-button delete-button" type="button" onClick={() => handleDelete(document.id)} aria-label={`Delete ${document.title}`} title="Delete document">
-                        <Trash2 size={16} />
-                      </button>
-                    )}
+            <>
+              <div className="document-group">
+                <div className="section-heading document-group-heading">
+                  <div><h3>My Documents</h3><span className="document-count">{myDocuments.length}</span></div>
+                </div>
+                {myDocuments.length === 0 ? (
+                  <div className="documents-empty compact-empty">
+                    <span className="empty-icon"><Files size={22} /></span>
+                    <h3>{search ? 'No matching documents' : 'No documents yet'}</h3>
+                    <p>{search ? 'Try a different search term.' : 'Documents you create will appear here.'}</p>
+                    {!search && <button className="primary-button empty-create-button" type="button" onClick={() => setIsCreating(true)}><Plus size={16} /> Create a document</button>}
                   </div>
-                  <Link className="document-open-link" to={`/documents/${document.id}`} aria-label={`Open ${document.title}`}>
-                    <h3>{document.title}</h3>
-                  </Link>
-                  <p className="document-preview">{document.content?.trim() || 'No content yet. Open this document to add your notes.'}</p>
-                  <div className="document-card-footer"><span><Clock3 size={14} /> {formatDate(document.updated_at)}</span><span>{document.owner_user_id === user?.id ? 'Owned by you' : 'Shared with you'}</span></div>
-                </article>
-              ))}
-            </div>
+                ) : (
+                  <div className="document-grid">
+                    {myDocuments.map((document) => (
+                      <article className="document-card" key={document.id}>
+                        <div className="document-card-top">
+                          <span className="document-icon"><FileText size={20} /></span>
+                          {(isAccountAdmin || document.owner_user_id === user?.id) && (
+                            <button className="icon-button delete-button" type="button" onClick={() => handleDelete(document.id)} aria-label={`Delete ${document.title}`} title="Delete document">
+                              <Trash2 size={16} />
+                            </button>
+                          )}
+                        </div>
+                        <Link className="document-open-link" to={`/documents/${document.id}`} aria-label={`Open ${document.title}`}><h3>{document.title}</h3></Link>
+                        <p className="document-preview">{document.content?.trim() || 'No content yet. Open this document to add your notes.'}</p>
+                        <div className="document-card-footer"><span><Clock3 size={14} /> {formatDate(document.updated_at)}</span><span>Owned by you</span></div>
+                      </article>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="document-group">
+                <div className="section-heading document-group-heading">
+                  <div><h3>Shared with Me</h3><span className="document-count">{sharedDocuments.length}</span></div>
+                </div>
+                {sharedDocuments.length === 0 ? (
+                  <div className="documents-empty compact-empty">
+                    <span className="empty-icon"><Files size={22} /></span>
+                    <h3>{search ? 'No matching shared documents' : 'Nothing shared with you yet'}</h3>
+                    <p>{search ? 'Try a different search term.' : 'Documents shared with you by your teammates will appear here.'}</p>
+                  </div>
+                ) : (
+                  <div className="document-grid">
+                    {sharedDocuments.map((document) => (
+                      <article className="document-card" key={document.id}>
+                        <div className="document-card-top"><span className="document-icon"><FileText size={20} /></span></div>
+                        <Link className="document-open-link" to={`/documents/${document.id}`} aria-label={`Open ${document.title}`}><h3>{document.title}</h3></Link>
+                        <p className="document-preview">{document.content?.trim() || 'No content yet. Open this document to view it.'}</p>
+                        <div className="document-card-footer"><span><Clock3 size={14} /> {formatDate(document.updated_at)}</span><span>Shared with you</span></div>
+                        <p className="shared-by-label">Shared with Me by <strong>{document.shared_by_name || 'A teammate'}</strong></p>
+                      </article>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
           )}
         </section>
       </section>
