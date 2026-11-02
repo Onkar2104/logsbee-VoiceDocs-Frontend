@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { FileText, Plus, Search, RefreshCw, Trash2, Clock3, Files } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/useAuth'
-import { createDocument, deleteDocument, fetchDocuments } from '../features/documents/documentsApi'
+import { createDocument, deleteDocument, fetchDocuments, fetchSharingSummary } from '../features/documents/documentsApi'
 
 function formatDate(value) {
   if (!value) return 'Recently updated'
@@ -16,6 +16,7 @@ export default function DashboardPage() {
   const { user, logout } = useAuth()
   const [documents, setDocuments] = useState([])
   const [activeSection, setActiveSection] = useState('my')
+  const [sharedByMeCount, setSharedByMeCount] = useState(0)
   const [search, setSearch] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [isCreating, setIsCreating] = useState(false)
@@ -27,6 +28,15 @@ export default function DashboardPage() {
 
   const fullName = [user?.first_name, user?.last_name].filter(Boolean).join(' ')
   const isAccountAdmin = user?.role?.name?.trim().toLowerCase() === 'admin'
+
+  const loadSharingSummary = useCallback(async () => {
+    try {
+      const summary = await fetchSharingSummary()
+      setSharedByMeCount(Number(summary?.shared_by_me_count || 0))
+    } catch {
+      setSharedByMeCount(0)
+    }
+  }, [])
 
   const loadDocuments = useCallback(async () => {
     setIsLoading(true)
@@ -45,12 +55,24 @@ export default function DashboardPage() {
     loadDocuments()
   }, [loadDocuments])
 
+  useEffect(() => {
+    loadSharingSummary()
+  }, [loadSharingSummary])
+
+  useEffect(() => {
+    if (activeSection === 'shared_by_me' && sharedByMeCount === 0) {
+      setActiveSection('my')
+    }
+  }, [activeSection, sharedByMeCount])
+
   const visibleDocuments = useMemo(() => {
     const query = search.trim().toLowerCase()
     return documents.filter((document) => {
       const belongsInSection = activeSection === 'my'
         ? document.owner_user_id === user?.id
-        : Boolean(document.shared_by_user_id)
+        : activeSection === 'shared'
+          ? Boolean(document.shared_by_user_id)
+          : true
       return belongsInSection && (!query || document.title?.toLowerCase().includes(query))
     })
   }, [documents, search, user?.id, activeSection])
@@ -147,14 +169,14 @@ export default function DashboardPage() {
           <div className="documents-toolbar">
             <div>
               <p className="eyebrow">DOCUMENT LIBRARY</p>
-              <h2>{activeSection === 'my' ? 'My Documents' : 'Shared with Me'} <span className="document-count">{visibleDocuments.length}</span></h2>
+              <h2>{activeSection === 'my' ? 'My Documents' : activeSection === 'shared' ? 'Shared with Me' : 'Shared by Me'} <span className="document-count">{visibleDocuments.length}</span></h2>
             </div>
             <div className="document-tools">
               <label className="search-field">
                 <Search size={17} />
                 <input aria-label="Search documents" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search documents" />
               </label>
-              <button className="icon-button" type="button" onClick={loadDocuments} aria-label="Refresh documents" title="Refresh">
+              <button className="icon-button" type="button" onClick={() => { loadDocuments(); loadSharingSummary() }} aria-label="Refresh documents" title="Refresh">
                 <RefreshCw size={17} />
               </button>
             </div>
@@ -181,17 +203,30 @@ export default function DashboardPage() {
               <FileText size={18} />
               <span>Shared with Me</span>
             </button>
+            {sharedByMeCount > 0 && (
+              <button
+                className={`document-section-tab ${activeSection === 'shared_by_me' ? 'active' : ''}`}
+                type="button"
+                role="tab"
+                aria-selected={activeSection === 'shared_by_me'}
+                onClick={() => setActiveSection('shared_by_me')}
+              >
+                <Files size={18} />
+                <span>Shared by Me</span>
+                <span className="document-count">{sharedByMeCount}</span>
+              </button>
+            )}
           </div>
 
           {error && <p className="alert alert-error" role="alert">{error}</p>}
 
           {isLoading ? (
-            <div className="documents-state"><RefreshCw className="spin-icon" size={22} /><p>Loading {activeSection === 'my' ? 'your' : 'shared'} documents…</p></div>
+            <div className="documents-state"><RefreshCw className="spin-icon" size={22} /><p>Loading {activeSection === 'my' ? 'your' : activeSection === 'shared' ? 'shared' : 'documents you shared'}…</p></div>
           ) : visibleDocuments.length === 0 ? (
             <div className="documents-empty">
               <span className="empty-icon"><Files size={25} /></span>
-              <h3>{search ? 'No matching documents' : activeSection === 'my' ? 'No documents yet' : 'Nothing shared with you yet'}</h3>
-              <p>{search ? 'Try a different search term.' : activeSection === 'my' ? 'Create your first document to get started.' : 'Documents shared with you by your teammates will appear here.'}</p>
+              <h3>{search ? 'No matching documents' : activeSection === 'my' ? 'No documents yet' : activeSection === 'shared' ? 'Nothing shared with you yet' : 'No documents shared by you'}</h3>
+              <p>{search ? 'Try a different search term.' : activeSection === 'my' ? 'Create your first document to get started.' : activeSection === 'shared' ? 'Documents shared with you by your teammates will appear here.' : 'Documents you have shared with teammates will appear here.'}</p>
               {activeSection === 'my' && !search && <button className="primary-button empty-create-button" type="button" onClick={() => setIsCreating(true)}><Plus size={16} /> Create your first document</button>}
             </div>
           ) : (
@@ -212,7 +247,7 @@ export default function DashboardPage() {
                   <p className="document-preview">{document.content?.trim() || (activeSection === 'my' ? 'No content yet. Open this document to add your notes.' : 'No content yet. Open this document to view it.')}</p>
                   <div className="document-card-footer">
                     <span><Clock3 size={14} /> {formatDate(document.updated_at)}</span>
-                    <span>{activeSection === 'my' ? 'Owned by you' : 'Shared with you'}</span>
+                    <span>{activeSection === 'my' ? 'Owned by you' : activeSection === 'shared' ? 'Shared with you' : 'Shared by you'}</span>
                   </div>
                   {activeSection === 'shared' && (
                     <p className="shared-by-label">Shared with Me by <strong>{document.shared_by_name || 'A teammate'}</strong></p>
