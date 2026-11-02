@@ -1,12 +1,8 @@
-import { createContext, useCallback, useContext, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
+import { AuthContext } from './authContext'
 import { clearAccessToken, setAccessToken } from '../lib/api'
-import {
-  loginWithPassword,
-  verifyLoginOtp,
-} from '../lib/logsbeeApi'
+import { loginWithPassword, verifyLoginOtp } from '../lib/logsbeeApi'
 import { fetchCurrentUser } from '../features/current-user/currentUserApi'
-
-const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
@@ -19,7 +15,6 @@ export function AuthProvider({ children }) {
     }
 
     setAccessToken(tokens.access_token)
-
     try {
       const currentUser = await fetchCurrentUser()
       setUser(currentUser)
@@ -37,7 +32,6 @@ export function AuthProvider({ children }) {
     setIsLoading(true)
     try {
       const result = await loginWithPassword(credentials)
-
       if (result.requires_2fa) {
         return {
           requires2FA: true,
@@ -45,7 +39,6 @@ export function AuthProvider({ children }) {
           message: result.message,
         }
       }
-
       await completeAuthentication(result)
       return { requires2FA: false }
     } finally {
@@ -70,21 +63,8 @@ export function AuthProvider({ children }) {
   }, [])
 
   const value = useMemo(() => ({
-    user,
-    isAuthenticated,
-    isLoading,
-    login,
-    verifyOtp,
-    logout,
+    user, isAuthenticated, isLoading, login, verifyOtp, logout,
   }), [user, isAuthenticated, isLoading, login, verifyOtp, logout])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
-}
-
-export function useAuth() {
-  const context = useContext(AuthContext)
-  if (!context) {
-    throw new Error('useAuth must be used inside AuthProvider')
-  }
-  return context
 }
