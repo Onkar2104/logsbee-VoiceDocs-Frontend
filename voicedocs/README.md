@@ -9,41 +9,49 @@ React + Vite frontend for VoiceDocs.
 
 ## Setup
 
-Run these commands from the `voicedocs` directory:
+From PowerShell:
 
-```bash
+```powershell
+cd voicedocs
 npm install
-cp .env.example .env
+Copy-Item .env.example .env
 npm run dev
 ```
 
-On Windows PowerShell, copy the environment file with:
+## Local services
 
-```powershell
-Copy-Item .env.example .env
-```
+Run both backend services before signing in:
 
-## API configuration
+- VoiceDocs backend: `http://127.0.0.1:8000`
+- Logsbee User Management API: `http://127.0.0.1:8001`
 
-The VoiceDocs backend is configured with:
-
-```env
-API_V1_PREFIX=/api
-```
-
-Set the frontend environment variable to the matching API base URL:
+The local frontend uses these values in `.env`:
 
 ```env
 VITE_API_BASE_URL=http://127.0.0.1:8000/api
+VITE_LOGSBEE_API_BASE_URL=http://127.0.0.1:8001/api
 ```
 
-The frontend appends the route path used by the backend. For example, the current-user endpoint is:
+The VoiceDocs backend has `API_V1_PREFIX=/api`. Its authenticated current-user endpoint is `GET /api/me`. Logsbee login endpoints are:
 
-```
-GET /api/me
-```
+- `POST /api/auth/login/password`
+- `POST /api/auth/login/verify-otp`
 
-For a deployed backend, replace the local origin with the deployed backend URL and retain the `/api` suffix.
+If your backend ports differ, update the two Vite environment variables and restart Vite.
+
+## Authentication flow
+
+1. The frontend sends email and password to Logsbee.
+2. If Logsbee returns `requires_2fa=true`, the UI asks for the email OTP and submits the challenge ID and OTP.
+3. After authentication, the access token is held in memory and sent as a Bearer token to VoiceDocs.
+4. VoiceDocs validates that token through Logsbee and returns the current user context from `GET /api/me`.
+5. The protected dashboard displays the user's name, email, role, account, and email-verification status.
+
+The access token is intentionally memory-only in this first implementation. Reloading the browser clears the session and requires signing in again. Refresh-token renewal and a persistent session strategy are not implemented yet.
+
+## CORS
+
+Allow the Vite development origin (normally `http://localhost:5173`) in both backend CORS configurations. If you use a different Vite port, allow that exact origin.
 
 ## Available scripts
 
@@ -54,10 +62,11 @@ npm run build
 npm run preview
 ```
 
-## Current API integration foundation
+## Implemented in this branch
 
-- Shared Axios client with configurable API base URL.
-- Bearer-token request support through `setAccessToken(token)`.
-- Token clearing through `clearAccessToken()`.
-- Current-user API function for `GET /api/me`.
-- Common API error-message extraction.
+- Shared Axios client for VoiceDocs API calls.
+- Separate Logsbee API client for login and OTP verification.
+- Password login and optional email OTP verification.
+- In-memory Bearer token forwarding.
+- Current-user fetch and protected dashboard route.
+- Sign out and API error messaging.
