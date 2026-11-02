@@ -15,6 +15,11 @@ export async function createDocument(payload) {
   return response.data
 }
 
+export async function requestDocumentEditAccess(documentId) {
+  const response = await api.post(`/documents/${documentId}/edit-requests`)
+  return response.data
+}
+
 export async function updateDocument(documentId, payload) {
   const response = await api.put(`/documents/${documentId}`, payload)
   return response.data
