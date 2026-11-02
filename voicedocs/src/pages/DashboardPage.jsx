@@ -24,6 +24,7 @@ export default function DashboardPage() {
   const [content, setContent] = useState('')
 
   const fullName = [user?.first_name, user?.last_name].filter(Boolean).join(' ')
+  const isAccountAdmin = user?.role?.name?.trim().toLowerCase() === 'admin'
 
   const loadDocuments = useCallback(async () => {
     setIsLoading(true)
@@ -170,9 +171,11 @@ export default function DashboardPage() {
                 <article className="document-card" key={document.id}>
                   <div className="document-card-top">
                     <span className="document-icon"><FileText size={20} /></span>
-                    <button className="icon-button delete-button" type="button" onClick={() => handleDelete(document.id)} aria-label={`Delete ${document.title}`} title="Delete document">
-                      <Trash2 size={16} />
-                    </button>
+                    {(isAccountAdmin || document.owner_user_id === user?.id) && (
+                      <button className="icon-button delete-button" type="button" onClick={() => handleDelete(document.id)} aria-label={`Delete ${document.title}`} title="Delete document">
+                        <Trash2 size={16} />
+                      </button>
+                    )}
                   </div>
                   <h3>{document.title}</h3>
                   <p className="document-preview">{document.content?.trim() || 'No content yet. Open this document to add your notes.'}</p>
