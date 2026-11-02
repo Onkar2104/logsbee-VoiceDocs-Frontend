@@ -145,3 +145,5 @@
   .editor-actions { align-items: stretch; flex-direction: column; }
   .editor-actions .primary-button { width: 100%; }
 }
+
+.readonly-actions { display: flex; justify-content: flex-end; margin: -8px 0 24px; }
