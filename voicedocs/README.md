@@ -37,10 +37,10 @@ Set the frontend environment variable to the matching API base URL:
 VITE_API_BASE_URL=http://127.0.0.1:8000/api
 ```
 
-The frontend appends the versioned route path. For example, the current-user endpoint is:
+The frontend appends the route path used by the backend. For example, the current-user endpoint is:
 
 ```
-GET /api/v1/me
+GET /api/me
 ```
 
 For a deployed backend, replace the local origin with the deployed backend URL and retain the `/api` suffix.
