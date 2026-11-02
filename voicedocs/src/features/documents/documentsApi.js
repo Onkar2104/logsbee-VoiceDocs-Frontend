@@ -29,3 +29,8 @@ export async function deleteDocument(documentId) {
   const response = await api.delete(`/documents/${documentId}`)
   return response.data
 }
+
+export async function fetchSharingSummary() {
+  const response = await api.get('/documents/sharing-summary')
+  return response.data
+}
