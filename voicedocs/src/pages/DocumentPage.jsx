@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { ArrowLeft, Clock3, FileText, Save, Trash2 } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../context/useAuth'
-import { deleteDocument, fetchDocument, updateDocument } from '../features/documents/documentsApi'
+import { deleteDocument, fetchDocument, requestDocumentEditAccess, updateDocument } from '../features/documents/documentsApi'
 
 function formatDate(value) {
   if (!value) return 'Not available'
@@ -20,6 +20,7 @@ export default function DocumentPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
+  const [isRequestingAccess, setIsRequestingAccess] = useState(false)
 
   const isAccountAdmin = user?.role?.name?.trim().toLowerCase() === 'admin'
   const canManage = Boolean(document && (isAccountAdmin || document.owner_user_id === user?.id))
@@ -62,6 +63,20 @@ export default function DocumentPage() {
       setError(requestError.response?.data?.detail || 'Could not save your changes.')
     } finally {
       setIsSaving(false)
+    }
+  }
+
+  async function handleRequestEditAccess() {
+    setIsRequestingAccess(true)
+    setError('')
+    setNotice('')
+    try {
+      const result = await requestDocumentEditAccess(documentId)
+      setNotice(result.edit_request_status === 'pending' ? 'Your edit access request has been sent to the document owner.' : 'Your edit access request was submitted.')
+    } catch (requestError) {
+      setError(requestError.response?.data?.detail || 'Could not request edit access.')
+    } finally {
+      setIsRequestingAccess(false)
     }
   }
 
@@ -130,7 +145,8 @@ export default function DocumentPage() {
             </form>
           ) : (
             <div className="document-readonly">
-              <div className="readonly-notice">You have view access to this document. Only its owner or an account admin can edit it.</div>
+              <div className="readonly-notice">You have view access to this document. Request edit access from its owner if you need to make changes.</div>
+              <div className="readonly-actions"><button className="primary-button save-button" type="button" onClick={handleRequestEditAccess} disabled={isRequestingAccess}>{isRequestingAccess ? 'Sending request…' : 'Request edit access'}</button></div>
               <h2>{document.title}</h2>
               <p>{document.content || 'This document is empty.'}</p>
             </div>
