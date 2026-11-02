@@ -32,18 +32,18 @@ export default function DashboardPage() {
     setIsLoading(true)
     setError('')
     try {
-      const result = await fetchDocuments()
+      const result = await fetchDocuments(activeSection)
       setDocuments(Array.isArray(result) ? result : [])
     } catch (requestError) {
       setError(requestError.response?.data?.detail || 'Could not load your documents. Please try again.')
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [activeSection])
 
   useEffect(() => {
     loadDocuments()
-  }, [loadDocuments, activeSection])
+  }, [loadDocuments])
 
   const visibleDocuments = useMemo(() => {
     const query = search.trim().toLowerCase()
@@ -66,7 +66,7 @@ export default function DashboardPage() {
     setFormError('')
     try {
       const created = await createDocument({ title: title.trim(), content })
-      setDocuments((current) => [created, ...current])
+      if (activeSection === 'my') setDocuments((current) => [created, ...current])
       setTitle('')
       setContent('')
       setIsCreating(false)
