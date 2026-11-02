@@ -1,16 +1,63 @@
-# React + Vite
+# VoiceDocs Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React + Vite frontend for VoiceDocs.
 
-Currently, two official plugins are available:
+## Requirements
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- Node.js compatible with the Vite version in `package.json`
+- npm
 
-## React Compiler
+## Setup
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Run these commands from the `voicedocs` directory:
 
-## Expanding the ESLint configuration
+```bash
+npm install
+cp .env.example .env
+npm run dev
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+On Windows PowerShell, copy the environment file with:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+## API configuration
+
+The VoiceDocs backend is configured with:
+
+```env
+API_V1_PREFIX=/api
+```
+
+Set the frontend environment variable to the matching API base URL:
+
+```env
+VITE_API_BASE_URL=http://127.0.0.1:8000/api
+```
+
+The frontend appends the versioned route path. For example, the current-user endpoint is:
+
+```
+GET /api/v1/me
+```
+
+For a deployed backend, replace the local origin with the deployed backend URL and retain the `/api` suffix.
+
+## Available scripts
+
+```bash
+npm run dev
+npm run lint
+npm run build
+npm run preview
+```
+
+## Current API integration foundation
+
+- Shared Axios client with configurable API base URL.
+- Bearer-token request support through `setAccessToken(token)`.
+- Token clearing through `clearAccessToken()`.
+- Current-user API function for `GET /api/v1/me`.
+- Common API error-message extraction.
