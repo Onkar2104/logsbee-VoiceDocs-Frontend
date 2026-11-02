@@ -5,8 +5,18 @@ export async function fetchDocuments() {
   return response.data
 }
 
+export async function fetchDocument(documentId) {
+  const response = await api.get(`/documents/${documentId}`)
+  return response.data
+}
+
 export async function createDocument(payload) {
   const response = await api.post('/documents/', payload)
+  return response.data
+}
+
+export async function updateDocument(documentId, payload) {
+  const response = await api.put(`/documents/${documentId}`, payload)
   return response.data
 }
 
