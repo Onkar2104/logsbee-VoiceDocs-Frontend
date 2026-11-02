@@ -1,7 +1,7 @@
 import { api } from '../../lib/api'
 
-export async function fetchDocuments() {
-  const response = await api.get('/documents/')
+export async function fetchDocuments(scope = 'my') {
+  const response = await api.get('/documents/', { params: { scope } })
   return response.data
 }
 
