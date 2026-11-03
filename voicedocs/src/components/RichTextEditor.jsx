@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { EditorContent, useEditor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Underline from '@tiptap/extension-underline'
@@ -51,7 +51,7 @@ const TOOL_GROUPS = [
 
 export default function RichTextEditor({ value, onChange, editable = true, editorRef, placeholder = 'Start writing your document…' }) {
   const [counts, setCounts] = useState({ words: 0, characters: 0 })
-  const initialContent = useMemo(() => toEditorContent(value || ''), [])
+  const [initialContent] = useState(() => toEditorContent(value || ''))
   const editor = useEditor({
     extensions: [
       StarterKit,
@@ -65,6 +65,7 @@ export default function RichTextEditor({ value, onChange, editable = true, edito
       attributes: {
         class: 'rich-text-content',
         'aria-label': 'Document content editor',
+        id: 'edit-document-content',
         'data-placeholder': placeholder,
       },
     },
