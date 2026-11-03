@@ -37,8 +37,6 @@ export default function VoiceDictation({ onTranscript }) {
   const recorderRef = useRef(null)
   const streamRef = useRef(null)
   const chunksRef = useRef([])
-  const intervalRef = useRef(null)
-  const inFlightRef = useRef(null)
   const languageRef = useRef(language)
   const modeRef = useRef(mode)
 
@@ -46,7 +44,6 @@ export default function VoiceDictation({ onTranscript }) {
   useEffect(() => { modeRef.current = mode }, [mode])
 
   useEffect(() => () => {
-    window.clearInterval(intervalRef.current)
     if (recorderRef.current?.state === 'recording') recorderRef.current.stop()
     streamRef.current?.getTracks().forEach((track) => track.stop())
   }, [])
@@ -60,22 +57,6 @@ export default function VoiceDictation({ onTranscript }) {
     return result.text || ''
   }
 
-  async function refreshLiveTranscript() {
-    if (inFlightRef.current || chunksRef.current.length === 0) return
-    const blob = new Blob(chunksRef.current, { type: recorderRef.current?.mimeType || 'audio/webm' })
-    if (!blob.size) return
-    const request = transcribeBlob(blob)
-    inFlightRef.current = request
-    setIsTranscribing(true)
-    try {
-      await request
-    } catch (requestError) {
-      setError(requestError.response?.data?.detail || 'Live transcription failed. Check that the backend and Whisper model are available.')
-    } finally {
-      inFlightRef.current = null
-      setIsTranscribing(false)
-    }
-  }
 
   async function startRecording(selectedMode) {
     setError('')
@@ -98,11 +79,9 @@ export default function VoiceDictation({ onTranscript }) {
         if (event.data?.size) chunksRef.current.push(event.data)
       }
       recorder.onstop = async () => {
-        window.clearInterval(intervalRef.current)
         setIsRecording(false)
         stream.getTracks().forEach((track) => track.stop())
         try {
-          if (modeRef.current === 'live' && inFlightRef.current) await inFlightRef.current
           const blob = new Blob(chunksRef.current, { type: recorder.mimeType || 'audio/webm' })
           if (!blob.size) throw new Error('No audio was captured.')
           setIsTranscribing(true)
@@ -118,9 +97,6 @@ export default function VoiceDictation({ onTranscript }) {
       }
       recorder.start(1000)
       setIsRecording(true)
-      if (selectedMode === 'live') {
-        intervalRef.current = window.setInterval(refreshLiveTranscript, 8000)
-      }
     } catch (requestError) {
       setError(requestError.name === 'NotAllowedError'
         ? 'Microphone permission was denied. Allow microphone access and try again.'
@@ -129,7 +105,6 @@ export default function VoiceDictation({ onTranscript }) {
   }
 
   function stopRecording() {
-    window.clearInterval(intervalRef.current)
     if (recorderRef.current?.state === 'recording') recorderRef.current.stop()
   }
 
@@ -164,11 +139,11 @@ export default function VoiceDictation({ onTranscript }) {
       {(isRecording || isTranscribing || preview) && (
         <div className="voice-transcript-preview" aria-live="polite">
           <div className="voice-preview-meta">
-            <span>{isRecording ? (mode === 'live' ? 'Listening · live preview' : 'Recording audio') : isTranscribing ? 'Transcribing audio…' : 'Transcript ready'}</span>
+            <span>{isRecording ? (mode === 'live' ? 'Listening · live dictation' : 'Recording audio') : isTranscribing ? 'Transcribing audio…' : 'Transcript ready'}</span>
             {detectedLanguage && <span>Detected: {detectedLanguage.toUpperCase()}</span>}
           </div>
           <p>{preview || (isRecording ? 'Speak clearly. Your transcript will appear here…' : 'Preparing transcript…')}</p>
-          {mode === 'live' && isRecording && <small>Live preview updates as audio is processed. Text is inserted into the document when you stop.</small>}
+          {mode === 'live' && isRecording && <small>Speak naturally. Whisper will transcribe the complete recording when you stop.</small>}
         </div>
       )}
       {error && <p className="voice-error" role="alert">{error}</p>}
