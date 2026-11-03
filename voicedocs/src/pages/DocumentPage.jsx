@@ -43,7 +43,13 @@ export default function DocumentPage() {
   }, [documentId])
 
   useEffect(() => {
-    loadDocument()
+    let cancelled = false
+    const startLoading = async () => {
+      await Promise.resolve()
+      if (!cancelled) await loadDocument()
+    }
+    void startLoading()
+    return () => { cancelled = true }
   }, [loadDocument])
 
   function handleTranscriptInsert(transcript) {
