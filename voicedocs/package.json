@@ -20,12 +20,7 @@
     "@tiptap/react": "^3.0.0",
     "@tiptap/starter-kit": "^3.0.0",
     "@tiptap/extension-text-align": "^3.0.0",
-    "@tiptap/extension-placeholder": "^3.0.0",
-    "@tiptap/extension-image": "^3.0.0",
-    "@tiptap/extension-table": "^3.0.0",
-    "@tiptap/extension-table-row": "^3.0.0",
-    "@tiptap/extension-table-header": "^3.0.0",
-    "@tiptap/extension-table-cell": "^3.0.0"
+    "@tiptap/extension-placeholder": "^3.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
