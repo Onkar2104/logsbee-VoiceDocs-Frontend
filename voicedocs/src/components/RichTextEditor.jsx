@@ -3,10 +3,11 @@ import { EditorContent, useEditor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import TextAlign from '@tiptap/extension-text-align'
 import Placeholder from '@tiptap/extension-placeholder'
+import Link from '@tiptap/extension-link'
 import {
   AlignCenter, AlignJustify, AlignLeft, AlignRight, Bold, Heading1, Heading2,
   Italic, List, ListOrdered, Redo2, Strikethrough, Underline as UnderlineIcon,
-  Undo2, Quote, Pilcrow,
+  Undo2, Quote, Pilcrow, Link2, Unlink,
 } from 'lucide-react'
 
 function escapeHtml(value) {
@@ -51,11 +52,27 @@ const TOOL_GROUPS = [
 export default function RichTextEditor({ value, onChange, editable = true, editorRef, placeholder = 'Start writing your document…' }) {
   const [counts, setCounts] = useState({ words: 0, characters: 0 })
   const [initialContent] = useState(() => toEditorContent(value || ''))
+  function handleSetLink() {
+    if (!editor) return
+    const currentHref = editor.getAttributes('link').href || ''
+    const enteredUrl = window.prompt('Enter a link URL (https:// or mailto:)', currentHref)
+    if (enteredUrl === null) return
+    const rawUrl = enteredUrl.trim()
+    if (!rawUrl) { editor.chain().focus().extendMarkRange('link').unsetLink().run(); return }
+    const safeUrl = /^(https?:\\/\\/|mailto:)/i.test(rawUrl) ? rawUrl : 'https://' + rawUrl
+    try {
+      const parsed = new URL(safeUrl)
+      if (!['http:', 'https:', 'mailto:'].includes(parsed.protocol)) throw new Error('Unsupported URL protocol')
+      editor.chain().focus().extendMarkRange('link').setLink({ href: parsed.href, target: '_blank', rel: 'noopener noreferrer nofollow' }).run()
+    } catch { window.alert('Please enter a valid web address or email link.') }
+  }
+
   const editor = useEditor({
     extensions: [
       StarterKit,
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
       Placeholder.configure({ placeholder }),
+      Link.configure({ openOnClick: false, autolink: true, linkOnPaste: true, HTMLAttributes: { target: '_blank', rel: 'noopener noreferrer nofollow' } }),
     ],
     content: initialContent,
     editable,
@@ -133,6 +150,10 @@ export default function RichTextEditor({ value, onChange, editable = true, edito
               ))}
             </div>
           ))}
+          <div className="rich-text-tool-group">
+            <button type="button" className={`rich-text-tool ${editor.isActive('link') ? 'active' : ''}`} title="Insert or edit link" aria-label="Insert or edit link" onMouseDown={(event) => event.preventDefault()} onClick={handleSetLink}><Link2 size={16} /></button>
+            <button type="button" className="rich-text-tool" title="Remove link" aria-label="Remove link" disabled={!editor.isActive('link')} onMouseDown={(event) => event.preventDefault()} onClick={() => editor.chain().focus().extendMarkRange('link').unsetLink().run()}><Unlink size={16} /></button>
+          </div>
           <div className="rich-text-tool-group history-tools">
             <button type="button" className="rich-text-tool" title="Undo" aria-label="Undo" disabled={!editor.can().undo()} onMouseDown={(event) => event.preventDefault()} onClick={() => editor.chain().focus().undo().run()}><Undo2 size={16} /></button>
             <button type="button" className="rich-text-tool" title="Redo" aria-label="Redo" disabled={!editor.can().redo()} onMouseDown={(event) => event.preventDefault()} onClick={() => editor.chain().focus().redo().run()}><Redo2 size={16} /></button>
