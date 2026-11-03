@@ -59,7 +59,7 @@ export default function RichTextEditor({ value, onChange, editable = true, edito
     if (enteredUrl === null) return
     const rawUrl = enteredUrl.trim()
     if (!rawUrl) { editor.chain().focus().extendMarkRange('link').unsetLink().run(); return }
-    const safeUrl = /^(https?:\\/\\/|mailto:)/i.test(rawUrl) ? rawUrl : 'https://' + rawUrl
+    const safeUrl = (rawUrl.startsWith('http://') || rawUrl.startsWith('https://') || rawUrl.startsWith('mailto:')) ? rawUrl : 'https://' + rawUrl
     try {
       const parsed = new URL(safeUrl)
       if (!['http:', 'https:', 'mailto:'].includes(parsed.protocol)) throw new Error('Unsupported URL protocol')
