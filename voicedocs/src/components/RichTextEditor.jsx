@@ -98,7 +98,7 @@ export default function RichTextEditor({ value, onChange, editable = true, edito
       editor.commands.setContent(nextContent, { emitUpdate: false })
       const text = editor.getText()
       setCounts({
-        words: text.trim() ? text.trim().split(/\\s+/).length : 0,
+        words: text.trim() ? text.trim().split(/\s+/).length : 0,
         characters: text.length,
       })
     }
