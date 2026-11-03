@@ -4,6 +4,22 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../context/useAuth'
 import { createDocument, deleteDocument, fetchDocuments, fetchSharingSummary } from '../features/documents/documentsApi'
 
+function getDocumentPreview(content) {
+  if (!content?.trim()) return ''
+  return content
+    .replace(/<br\\s*\\/?\\s*>/gi, ' ')
+    .replace(/<\\/(p|h[1-6]|li|div|blockquote|tr)>/gi, ' ')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&#x27;/gi, "'")
+    .replace(/\\s+/g, ' ')
+    .trim()
+}
+
 function formatDate(value) {
   if (!value) return 'Recently updated'
   return new Intl.DateTimeFormat(undefined, {
@@ -251,7 +267,7 @@ export default function DashboardPage() {
                   <Link className="document-open-link" to={`/documents/${document.id}`} aria-label={`Open ${document.title}`}>
                     <h3>{document.title}</h3>
                   </Link>
-                  <p className="document-preview">{document.content?.trim() || (activeSection === 'my' ? 'No content yet. Open this document to add your notes.' : 'No content yet. Open this document to view it.')}</p>
+                  <p className="document-preview">{getDocumentPreview(document.content) || (activeSection === 'my' ? 'No content yet. Open this document to add your notes.' : 'No content yet. Open this document to view it.')}</p>
                   <div className="document-card-footer">
                     <span><Clock3 size={14} /> {formatDate(document.updated_at)}</span>
                     <span>{activeSection === 'my' ? 'Owned by you' : activeSection === 'shared' ? 'Shared with you' : 'Shared by you'}</span>
