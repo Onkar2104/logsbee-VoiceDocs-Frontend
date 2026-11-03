@@ -82,6 +82,7 @@ export default function VoiceDictation({ onTranscript }) {
     setPreview('')
     setDetectedLanguage('')
     setMode(selectedMode)
+    modeRef.current = selectedMode
     chunksRef.current = []
     if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
       setError('Audio recording is not supported in this browser. Use a recent Chrome or Edge browser over HTTPS or localhost.')
