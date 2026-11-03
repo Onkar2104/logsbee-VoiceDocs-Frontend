@@ -3,6 +3,7 @@ import { EditorContent, useEditor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Underline from '@tiptap/extension-underline'
 import TextAlign from '@tiptap/extension-text-align'
+import Placeholder from '@tiptap/extension-placeholder'
 import {
   AlignCenter, AlignJustify, AlignLeft, AlignRight, Bold, Heading1, Heading2,
   Italic, List, ListOrdered, Redo2, Strikethrough, Underline as UnderlineIcon,
@@ -56,6 +57,7 @@ export default function RichTextEditor({ value, onChange, editable = true, edito
       StarterKit,
       Underline,
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
+      Placeholder.configure({ placeholder }),
     ],
     content: initialContent,
     editable,
@@ -87,6 +89,19 @@ export default function RichTextEditor({ value, onChange, editable = true, edito
     if (!editor) return
     editor.setEditable(editable)
   }, [editor, editable])
+
+  useEffect(() => {
+    if (!editor) return
+    const nextContent = toEditorContent(value || '')
+    if (editor.getHTML() !== nextContent) {
+      editor.commands.setContent(nextContent, { emitUpdate: false })
+      const text = editor.getText()
+      setCounts({
+        words: text.trim() ? text.trim().split(/\\s+/).length : 0,
+        characters: text.length,
+      })
+    }
+  }, [editor, value])
 
   useEffect(() => {
     if (editorRef) editorRef.current = editor
