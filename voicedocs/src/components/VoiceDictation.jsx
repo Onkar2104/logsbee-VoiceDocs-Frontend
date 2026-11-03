@@ -26,6 +26,28 @@ const LANGUAGES = [
   { value: 'zh', label: 'Chinese' },
 ]
 
+function getErrorMessage(requestError) {
+  const detail = requestError?.response?.data?.detail
+
+  if (Array.isArray(detail)) {
+    return detail
+      .map((item) => {
+        if (typeof item === 'string') return item
+        const location = Array.isArray(item?.loc) ? item.loc.join(' → ') : ''
+        return [location, item?.msg].filter(Boolean).join(': ')
+      })
+      .filter(Boolean)
+      .join('; ') || 'The server rejected the audio upload.'
+  }
+
+  if (typeof detail === 'string') return detail
+  if (detail && typeof detail === 'object') {
+    return detail.msg || detail.message || 'The server rejected the audio upload.'
+  }
+
+  return requestError?.message || 'Could not transcribe this recording. Please try again.'
+}
+
 export default function VoiceDictation({ onTranscript }) {
   const [language, setLanguage] = useState('')
   const [mode, setMode] = useState('live')
@@ -88,7 +110,7 @@ export default function VoiceDictation({ onTranscript }) {
           const transcript = await transcribeBlob(blob)
           if (transcript) onTranscript(transcript)
         } catch (requestError) {
-          setError(requestError.response?.data?.detail || requestError.message || 'Could not transcribe this recording.')
+          setError(getErrorMessage(requestError))
         } finally {
           setIsTranscribing(false)
           streamRef.current = null
