@@ -293,3 +293,5 @@
 .rich-text-content .tableWrapper { overflow-x: auto; }
 .rich-text-content table p { margin: 0; }
 .rich-text-readonly .rich-text-content a { pointer-events: auto; }
+
+.rich-text-content a { color: #4056d4; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
