@@ -279,3 +279,17 @@
   .rich-text-tool { width: 29px; height: 30px; }
   .rich-text-content { padding: 14px; }
 }
+
+/* Rich text advanced content */
+.rich-text-content a { color: #4056d4; text-decoration: underline; text-underline-offset: 2px; }
+.rich-text-content a:hover { color: #263cae; }
+.rich-text-content img { display: block; max-width: 100%; height: auto; margin: 16px auto; border-radius: 8px; }
+.rich-text-content hr { margin: 22px 0; border: 0; border-top: 1px solid #dce2ed; }
+.rich-text-content table { width: 100%; margin: 16px 0; border-collapse: collapse; table-layout: fixed; overflow: hidden; }
+.rich-text-content th,.rich-text-content td { min-width: 80px; padding: 9px 11px; border: 1px solid #dce2ed; text-align: left; vertical-align: top; }
+.rich-text-content th { color: #344054; background: #f4f6fb; font-weight: 700; }
+.rich-text-content .selectedCell:after { background: rgba(82,104,232,.12); content: ""; inset: 0; pointer-events: none; position: absolute; z-index: 2; }
+.rich-text-content .column-resize-handle { position: absolute; top: 0; right: -2px; bottom: -2px; width: 4px; background: #5268e8; pointer-events: none; }
+.rich-text-content .tableWrapper { overflow-x: auto; }
+.rich-text-content table p { margin: 0; }
+.rich-text-readonly .rich-text-content a { pointer-events: auto; }
