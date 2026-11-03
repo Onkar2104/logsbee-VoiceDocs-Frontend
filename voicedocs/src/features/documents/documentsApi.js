@@ -39,6 +39,7 @@ export async function transcribeAudio(formData, language = '') {
   const response = await api.post('/transcriptions/', formData, {
     params: language ? { language } : {},
     timeout: 0,
+    headers: { 'Content-Type': 'multipart/form-data' },
   })
   return response.data
 }
