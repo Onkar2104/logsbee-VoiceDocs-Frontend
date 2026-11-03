@@ -11,7 +11,8 @@ import TableCell from '@tiptap/extension-table-cell'
 import {
   AlignCenter, AlignJustify, AlignLeft, AlignRight, Bold, Heading1, Heading2,
   Italic, List, ListOrdered, Redo2, Strikethrough, Underline as UnderlineIcon,
-  Undo2, Quote, Pilcrow, Link2, ImagePlus, Table2, Minus, ArrowDown, ArrowRight, Trash2,
+  Undo2, Quote, Pilcrow, Link2, Unlink, ImagePlus, Table2, Minus,
+  ArrowDown, ArrowRight, ArrowUp, ArrowLeft, Rows3, Columns3, Trash2,
 } from 'lucide-react'
 
 function escapeHtml(value) {
@@ -182,14 +183,20 @@ export default function RichTextEditor({ value, onChange, editable = true, edito
           ))}
           <div className="rich-text-tool-group">
             <button type="button" className={`rich-text-tool ${editor.isActive('link') ? 'active' : ''}`} title="Insert or edit link" aria-label="Insert or edit link" onMouseDown={(event) => event.preventDefault()} onClick={addLink}><Link2 size={16} /></button>
+            <button type="button" className="rich-text-tool" title="Remove link" aria-label="Remove link" disabled={!editor.isActive('link')} onMouseDown={(event) => event.preventDefault()} onClick={() => editor.chain().focus().extendMarkRange('link').unsetLink().run()}><Unlink size={16} /></button>
             <button type="button" className="rich-text-tool" title="Insert image by URL" aria-label="Insert image by URL" onMouseDown={(event) => event.preventDefault()} onClick={addImage}><ImagePlus size={16} /></button>
             <button type="button" className="rich-text-tool" title="Insert 3 × 3 table" aria-label="Insert table" onMouseDown={(event) => event.preventDefault()} onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}><Table2 size={16} /></button>
             <button type="button" className="rich-text-tool" title="Insert horizontal divider" aria-label="Insert horizontal divider" onMouseDown={(event) => event.preventDefault()} onClick={() => editor.chain().focus().setHorizontalRule().run()}><Minus size={16} /></button>
           </div>
           {editor.isActive('table') && (
             <div className="rich-text-tool-group" aria-label="Table actions">
+              <button type="button" className="rich-text-tool" title="Add row above" aria-label="Add row above" onMouseDown={(event) => event.preventDefault()} onClick={() => editor.chain().focus().addRowBefore().run()}><ArrowUp size={16} /></button>
               <button type="button" className="rich-text-tool" title="Add row below" aria-label="Add row below" onMouseDown={(event) => event.preventDefault()} onClick={() => editor.chain().focus().addRowAfter().run()}><ArrowDown size={16} /></button>
+              <button type="button" className="rich-text-tool" title="Add column before" aria-label="Add column before" onMouseDown={(event) => event.preventDefault()} onClick={() => editor.chain().focus().addColumnBefore().run()}><ArrowLeft size={16} /></button>
               <button type="button" className="rich-text-tool" title="Add column after" aria-label="Add column after" onMouseDown={(event) => event.preventDefault()} onClick={() => editor.chain().focus().addColumnAfter().run()}><ArrowRight size={16} /></button>
+              <button type="button" className="rich-text-tool" title="Toggle header row" aria-label="Toggle header row" onMouseDown={(event) => event.preventDefault()} onClick={() => editor.chain().focus().toggleHeaderRow().run()}><Rows3 size={16} /></button>
+              <button type="button" className="rich-text-tool" title="Delete current row" aria-label="Delete current row" onMouseDown={(event) => event.preventDefault()} onClick={() => editor.chain().focus().deleteRow().run()}><Rows3 size={16} /></button>
+              <button type="button" className="rich-text-tool" title="Delete current column" aria-label="Delete current column" onMouseDown={(event) => event.preventDefault()} onClick={() => editor.chain().focus().deleteColumn().run()}><Columns3 size={16} /></button>
               <button type="button" className="rich-text-tool" title="Delete table" aria-label="Delete table" onMouseDown={(event) => event.preventDefault()} onClick={() => editor.chain().focus().deleteTable().run()}><Trash2 size={16} /></button>
             </div>
           )}
