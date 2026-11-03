@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { AudioLines, Mic, Square } from 'lucide-react'
+import { AudioLines, Mic, Square, Upload } from 'lucide-react'
 import { transcribeAudio } from '../features/documents/documentsApi'
 
 const LANGUAGES = [
@@ -57,6 +57,7 @@ export default function VoiceDictation({ onTranscript }) {
   const [detectedLanguage, setDetectedLanguage] = useState('')
   const [error, setError] = useState('')
   const recorderRef = useRef(null)
+  const uploadInputRef = useRef(null)
   const streamRef = useRef(null)
   const chunksRef = useRef([])
   const languageRef = useRef(language)
@@ -126,6 +127,31 @@ export default function VoiceDictation({ onTranscript }) {
     }
   }
 
+  async function handleAudioUpload(event) {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+
+    if (file.size > 25 * 1024 * 1024) {
+      setError('Audio files must be 25 MB or smaller.')
+      return
+    }
+
+    setError('')
+    setPreview('')
+    setDetectedLanguage('')
+    setIsTranscribing(true)
+    try {
+      const transcript = await transcribeBlob(file, file.name)
+      if (transcript) onTranscript(transcript)
+      else setError('No speech was detected in this audio file.')
+    } catch (requestError) {
+      setError(getErrorMessage(requestError))
+    } finally {
+      setIsTranscribing(false)
+    }
+  }
+
   function stopRecording() {
     if (recorderRef.current?.state === 'recording') recorderRef.current.stop()
   }
@@ -151,6 +177,18 @@ export default function VoiceDictation({ onTranscript }) {
             <button type="button" className="voice-action-button voice-action-secondary" onClick={() => startRecording('record')} disabled={isTranscribing}>
               <AudioLines size={15} /> Record & transcribe
             </button>
+            <button type="button" className="voice-action-button voice-action-secondary" onClick={() => uploadInputRef.current?.click()} disabled={isTranscribing}>
+              <Upload size={15} /> Upload audio
+            </button>
+            <input
+              ref={uploadInputRef}
+              className="voice-file-input"
+              type="file"
+              accept="audio/*,.webm,.wav,.mp3,.m4a,.mp4,.ogg,.aac,.flac"
+              onChange={handleAudioUpload}
+              disabled={isTranscribing}
+              aria-label="Choose an audio file to transcribe"
+            />
           </div>
         ) : (
           <button type="button" className="voice-action-button voice-stop-button" onClick={stopRecording}>
