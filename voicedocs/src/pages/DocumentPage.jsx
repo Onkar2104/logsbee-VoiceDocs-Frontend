@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { ArrowLeft, Clock3, FileText, Save, Trash2 } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../context/useAuth'
+import VoiceDictation from '../components/VoiceDictation'
 import { deleteDocument, fetchDocument, requestDocumentEditAccess, updateDocument } from '../features/documents/documentsApi'
 
 function formatDate(value) {
@@ -21,6 +22,7 @@ export default function DocumentPage() {
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [isRequestingAccess, setIsRequestingAccess] = useState(false)
+  const contentTextareaRef = useRef(null)
 
   const isAccountAdmin = user?.role?.name?.trim().toLowerCase() === 'admin'
   const canManage = Boolean(document && (isAccountAdmin || document.owner_user_id === user?.id))
@@ -43,6 +45,24 @@ export default function DocumentPage() {
   useEffect(() => {
     loadDocument()
   }, [loadDocument])
+
+  function handleTranscriptInsert(transcript) {
+    const textarea = contentTextareaRef.current
+    const start = textarea?.selectionStart ?? content.length
+    const end = textarea?.selectionEnd ?? content.length
+    const prefix = start > 0 && !/\\s$/.test(content.slice(0, start)) ? ' ' : ''
+    const suffix = end < content.length && !/^\\s/.test(content.slice(end)) ? ' ' : ''
+    const insertion = `${prefix}${transcript.trim()}${suffix}`
+    const nextContent = content.slice(0, start) + insertion + content.slice(end)
+    setContent(nextContent)
+    setNotice('Transcription inserted. Save your document to keep the changes.')
+    requestAnimationFrame(() => {
+      if (!contentTextareaRef.current) return
+      const cursor = start + insertion.length
+      contentTextareaRef.current.focus()
+      contentTextareaRef.current.setSelectionRange(cursor, cursor)
+    })
+  }
 
   async function handleSave(event) {
     event.preventDefault()
