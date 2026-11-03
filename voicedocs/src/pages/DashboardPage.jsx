@@ -28,6 +28,7 @@ export default function DashboardPage() {
 
   const fullName = [user?.first_name, user?.last_name].filter(Boolean).join(' ')
   const isAccountAdmin = user?.role?.name?.trim().toLowerCase() === 'admin'
+  const currentSection = currentSection === 'shared_by_me' && sharedByMeCount === 0 ? 'my' : activeSection
 
   const loadSharingSummary = useCallback(async () => {
     try {
@@ -42,40 +43,46 @@ export default function DashboardPage() {
     setIsLoading(true)
     setError('')
     try {
-      const result = await fetchDocuments(activeSection)
+      const result = await fetchDocuments(currentSection)
       setDocuments(Array.isArray(result) ? result : [])
     } catch (requestError) {
       setError(requestError.response?.data?.detail || 'Could not load your documents. Please try again.')
     } finally {
       setIsLoading(false)
     }
-  }, [activeSection])
+  }, [currentSection])
 
   useEffect(() => {
-    loadDocuments()
+    let cancelled = false
+    const startLoading = async () => {
+      await Promise.resolve()
+      if (!cancelled) await loadDocuments()
+    }
+    void startLoading()
+    return () => { cancelled = true }
   }, [loadDocuments])
 
   useEffect(() => {
-    loadSharingSummary()
-  }, [loadSharingSummary])
-
-  useEffect(() => {
-    if (activeSection === 'shared_by_me' && sharedByMeCount === 0) {
-      setActiveSection('my')
+    let cancelled = false
+    const startLoading = async () => {
+      await Promise.resolve()
+      if (!cancelled) await loadSharingSummary()
     }
-  }, [activeSection, sharedByMeCount])
+    void startLoading()
+    return () => { cancelled = true }
+  }, [loadSharingSummary])
 
   const visibleDocuments = useMemo(() => {
     const query = search.trim().toLowerCase()
     return documents.filter((document) => {
       const belongsInSection = activeSection === 'my'
         ? document.owner_user_id === user?.id
-        : activeSection === 'shared'
+        : currentSection === 'shared'
           ? Boolean(document.shared_by_user_id)
           : true
       return belongsInSection && (!query || document.title?.toLowerCase().includes(query))
     })
-  }, [documents, search, user?.id, activeSection])
+  }, [documents, search, user?.id, currentSection])
 
   async function handleCreate(event) {
     event.preventDefault()
