@@ -75,7 +75,7 @@ export default function DashboardPage() {
   const visibleDocuments = useMemo(() => {
     const query = search.trim().toLowerCase()
     return documents.filter((document) => {
-      const belongsInSection = activeSection === 'my'
+      const belongsInSection = currentSection === 'my'
         ? document.owner_user_id === user?.id
         : currentSection === 'shared'
           ? Boolean(document.shared_by_user_id)
