@@ -7,8 +7,8 @@ import { createDocument, deleteDocument, fetchDocuments, fetchSharingSummary } f
 function getDocumentPreview(content) {
   if (!content?.trim()) return ''
   return content
-    .replace(/<br\\s*\\/?\\s*>/gi, ' ')
-    .replace(/<\\/(p|h[1-6]|li|div|blockquote|tr)>/gi, ' ')
+    .replace(/<br\s*\/?\s*>/gi, ' ')
+    .replace(/<\/(p|h[1-6]|li|div|blockquote|tr)>/gi, ' ')
     .replace(/<[^>]*>/g, ' ')
     .replace(/&nbsp;/gi, ' ')
     .replace(/&amp;/gi, '&')
@@ -16,7 +16,7 @@ function getDocumentPreview(content) {
     .replace(/&gt;/gi, '>')
     .replace(/&quot;/gi, '"')
     .replace(/&#39;|&#x27;/gi, "'")
-    .replace(/\\s+/g, ' ')
+    .replace(/\s+/g, ' ')
     .trim()
 }
 
