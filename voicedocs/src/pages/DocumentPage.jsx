@@ -3,6 +3,7 @@ import { ArrowLeft, Clock3, FileText, Save, Trash2 } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../context/useAuth'
 import VoiceDictation from '../components/VoiceDictation'
+import RichTextEditor from '../components/RichTextEditor'
 import { deleteDocument, fetchDocument, requestDocumentEditAccess, updateDocument } from '../features/documents/documentsApi'
 
 function formatDate(value) {
@@ -53,21 +54,10 @@ export default function DocumentPage() {
   }, [loadDocument])
 
   function handleTranscriptInsert(transcript) {
-    const textarea = contentTextareaRef.current
-    const start = textarea?.selectionStart ?? content.length
-    const end = textarea?.selectionEnd ?? content.length
-    const prefix = start > 0 && !/\s$/.test(content.slice(0, start)) ? ' ' : ''
-    const suffix = end < content.length && !/^\s/.test(content.slice(end)) ? ' ' : ''
-    const insertion = `${prefix}${transcript.trim()}${suffix}`
-    const nextContent = content.slice(0, start) + insertion + content.slice(end)
-    setContent(nextContent)
+    const editor = contentTextareaRef.current
+    if (!editor) return
+    editor.chain().focus().insertContent(transcript.trim()).run()
     setNotice('Transcription inserted. Save your document to keep the changes.')
-    requestAnimationFrame(() => {
-      if (!contentTextareaRef.current) return
-      const cursor = start + insertion.length
-      contentTextareaRef.current.focus()
-      contentTextareaRef.current.setSelectionRange(cursor, cursor)
-    })
   }
 
   async function handleSave(event) {
@@ -164,7 +154,7 @@ export default function DocumentPage() {
               <input id="edit-document-title" value={title} onChange={(event) => setTitle(event.target.value)} maxLength={255} />
               <label htmlFor="edit-document-content">Content</label>
               <VoiceDictation onTranscript={handleTranscriptInsert} />
-              <textarea ref={contentTextareaRef} id="edit-document-content" value={content} onChange={(event) => setContent(event.target.value)} rows={18} placeholder="Write your document here..." />
+              <RichTextEditor editorRef={contentTextareaRef} value={content} onChange={setContent} />
               <div className="editor-actions">
                 <span className="editor-hint">Changes are saved to your VoiceDocs workspace.</span>
                 <button className="primary-button save-button" type="submit" disabled={isSaving}><Save size={16} /> {isSaving ? 'Saving…' : 'Save changes'}</button>
@@ -175,7 +165,7 @@ export default function DocumentPage() {
               <div className="readonly-notice">You have view access to this document. Request edit access from its owner if you need to make changes.</div>
               <div className="readonly-actions"><button className="primary-button save-button" type="button" onClick={handleRequestEditAccess} disabled={isRequestingAccess}>{isRequestingAccess ? 'Sending request…' : 'Request edit access'}</button></div>
               <h2>{document.title}</h2>
-              <p>{document.content || 'This document is empty.'}</p>
+              <RichTextEditor value={document.content || ''} editable={false} />
             </div>
           )}
         </div>
