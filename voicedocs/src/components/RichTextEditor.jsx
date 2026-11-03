@@ -11,7 +11,7 @@ import TableCell from '@tiptap/extension-table-cell'
 import {
   AlignCenter, AlignJustify, AlignLeft, AlignRight, Bold, Heading1, Heading2,
   Italic, List, ListOrdered, Redo2, Strikethrough, Underline as UnderlineIcon,
-  Undo2, Quote, Pilcrow, Link2, ImagePlus, Table2, Minus,
+  Undo2, Quote, Pilcrow, Link2, ImagePlus, Table2, Minus, ArrowDown, ArrowRight, Trash2,
 } from 'lucide-react'
 
 function escapeHtml(value) {
@@ -57,6 +57,7 @@ export default function RichTextEditor({ value, onChange, editable = true, edito
   const [counts, setCounts] = useState({ words: 0, characters: 0 })
   const [initialContent] = useState(() => toEditorContent(value || ''))
   const editor = useEditor({
+    shouldRerenderOnTransaction: true,
     extensions: [
       StarterKit.configure({ link: { openOnClick: false, autolink: true, linkOnPaste: true } }),
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
@@ -185,6 +186,13 @@ export default function RichTextEditor({ value, onChange, editable = true, edito
             <button type="button" className="rich-text-tool" title="Insert 3 × 3 table" aria-label="Insert table" onMouseDown={(event) => event.preventDefault()} onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}><Table2 size={16} /></button>
             <button type="button" className="rich-text-tool" title="Insert horizontal divider" aria-label="Insert horizontal divider" onMouseDown={(event) => event.preventDefault()} onClick={() => editor.chain().focus().setHorizontalRule().run()}><Minus size={16} /></button>
           </div>
+          {editor.isActive('table') && (
+            <div className="rich-text-tool-group" aria-label="Table actions">
+              <button type="button" className="rich-text-tool" title="Add row below" aria-label="Add row below" onMouseDown={(event) => event.preventDefault()} onClick={() => editor.chain().focus().addRowAfter().run()}><ArrowDown size={16} /></button>
+              <button type="button" className="rich-text-tool" title="Add column after" aria-label="Add column after" onMouseDown={(event) => event.preventDefault()} onClick={() => editor.chain().focus().addColumnAfter().run()}><ArrowRight size={16} /></button>
+              <button type="button" className="rich-text-tool" title="Delete table" aria-label="Delete table" onMouseDown={(event) => event.preventDefault()} onClick={() => editor.chain().focus().deleteTable().run()}><Trash2 size={16} /></button>
+            </div>
+          )}
           <div className="rich-text-tool-group history-tools">
             <button type="button" className="rich-text-tool" title="Undo" aria-label="Undo" disabled={!editor.can().undo()} onMouseDown={(event) => event.preventDefault()} onClick={() => editor.chain().focus().undo().run()}><Undo2 size={16} /></button>
             <button type="button" className="rich-text-tool" title="Redo" aria-label="Redo" disabled={!editor.can().redo()} onMouseDown={(event) => event.preventDefault()} onClick={() => editor.chain().focus().redo().run()}><Redo2 size={16} /></button>
