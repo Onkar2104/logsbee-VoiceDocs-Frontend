@@ -196,6 +196,7 @@
 
 
 /* Voice-to-text controls */
+.voice-file-input { display: none; }
 .voice-dictation {
   margin: 14px 0 12px;
   padding: 15px 16px;
