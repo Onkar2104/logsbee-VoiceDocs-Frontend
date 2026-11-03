@@ -28,7 +28,7 @@ export default function DashboardPage() {
 
   const fullName = [user?.first_name, user?.last_name].filter(Boolean).join(' ')
   const isAccountAdmin = user?.role?.name?.trim().toLowerCase() === 'admin'
-  const currentSection = currentSection === 'shared_by_me' && sharedByMeCount === 0 ? 'my' : activeSection
+  const currentSection = activeSection === 'shared_by_me' && sharedByMeCount === 0 ? 'my' : activeSection
 
   const loadSharingSummary = useCallback(async () => {
     try {
