@@ -193,3 +193,57 @@
   .document-section-switcher { gap: 8px; }
   .document-section-tab { min-height: 54px; padding: 10px 8px; font-size: 12px; }
 }
+
+
+/* Voice-to-text controls */
+.voice-dictation {
+  margin: 14px 0 12px;
+  padding: 15px 16px;
+  border: 1px solid #e2e7f0;
+  border-radius: 12px;
+  background: #fafbff;
+}
+.voice-dictation-heading,.voice-dictation-heading > div,.voice-dictation-controls,
+.voice-start-actions,.voice-preview-meta {
+  display: flex;
+  align-items: center;
+}
+.voice-dictation-heading,.voice-dictation-controls {
+  justify-content: space-between;
+  gap: 12px;
+}
+.voice-dictation-heading > div { gap: 8px; color: #344054; font-size: 13px; }
+.voice-dictation-heading > div svg { color: #5268e8; }
+.voice-dictation-heading > span { color: #98a1b2; font-size: 10px; }
+.voice-dictation-controls { margin-top: 13px; flex-wrap: wrap; }
+.voice-language-field { display: grid; gap: 5px; color: #667085; font-size: 10px; font-weight: 700; }
+.voice-language-field select {
+  min-width: 175px; height: 36px; padding: 0 10px; border: 1px solid #dce2ed;
+  border-radius: 8px; color: #344054; background: white; font-size: 12px;
+}
+.voice-start-actions { gap: 8px; flex-wrap: wrap; }
+.voice-action-button {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  min-height: 37px; padding: 0 12px; border: 1px solid #5268e8; border-radius: 8px;
+  color: white; background: #5268e8; font-size: 11px; font-weight: 700;
+}
+.voice-action-button:hover:not(:disabled) { background: #4056d4; }
+.voice-action-button:disabled { cursor: not-allowed; opacity: .55; }
+.voice-action-secondary { border-color: #dce2ed; color: #475467; background: white; }
+.voice-action-secondary:hover:not(:disabled) { background: #f3f5fa; }
+.voice-stop-button { border-color: #d92d20; background: #d92d20; }
+.voice-stop-button:hover:not(:disabled) { background: #b42318; }
+.voice-transcript-preview {
+  margin-top: 13px; padding: 11px 12px; border: 1px solid #e3e8f3;
+  border-radius: 9px; background: white;
+}
+.voice-preview-meta { justify-content: space-between; gap: 10px; color: #5268e8; font-size: 10px; font-weight: 750; }
+.voice-transcript-preview p { margin: 8px 0 0; color: #475467; font-size: 12px; line-height: 1.6; white-space: pre-wrap; }
+.voice-transcript-preview small { display: block; margin-top: 7px; color: #98a1b2; font-size: 10px; line-height: 1.5; }
+.voice-error { margin: 10px 0 0; color: #b42318; font-size: 11px; line-height: 1.5; }
+@media (max-width: 640px) {
+  .voice-dictation-heading,.voice-dictation-controls { align-items: flex-start; flex-direction: column; }
+  .voice-start-actions { width: 100%; }
+  .voice-start-actions .voice-action-button { flex: 1; }
+  .voice-language-field,.voice-language-field select { width: 100%; }
+}
