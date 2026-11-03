@@ -50,8 +50,8 @@ export default function DocumentPage() {
     const textarea = contentTextareaRef.current
     const start = textarea?.selectionStart ?? content.length
     const end = textarea?.selectionEnd ?? content.length
-    const prefix = start > 0 && !/\\s$/.test(content.slice(0, start)) ? ' ' : ''
-    const suffix = end < content.length && !/^\\s/.test(content.slice(end)) ? ' ' : ''
+    const prefix = start > 0 && !/\s$/.test(content.slice(0, start)) ? ' ' : ''
+    const suffix = end < content.length && !/^\s/.test(content.slice(end)) ? ' ' : ''
     const insertion = `${prefix}${transcript.trim()}${suffix}`
     const nextContent = content.slice(0, start) + insertion + content.slice(end)
     setContent(nextContent)
@@ -157,7 +157,8 @@ export default function DocumentPage() {
               <label htmlFor="edit-document-title">Document title</label>
               <input id="edit-document-title" value={title} onChange={(event) => setTitle(event.target.value)} maxLength={255} />
               <label htmlFor="edit-document-content">Content</label>
-              <textarea id="edit-document-content" value={content} onChange={(event) => setContent(event.target.value)} rows={18} placeholder="Write your document here..." />
+              <VoiceDictation onTranscript={handleTranscriptInsert} />
+              <textarea ref={contentTextareaRef} id="edit-document-content" value={content} onChange={(event) => setContent(event.target.value)} rows={18} placeholder="Write your document here..." />
               <div className="editor-actions">
                 <span className="editor-hint">Changes are saved to your VoiceDocs workspace.</span>
                 <button className="primary-button save-button" type="submit" disabled={isSaving}><Save size={16} /> {isSaving ? 'Saving…' : 'Save changes'}</button>
