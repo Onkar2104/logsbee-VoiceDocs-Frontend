@@ -162,8 +162,6 @@ export default function RichTextEditor({ value, onChange, editable = true, edito
     }
   }, [editor, editorRef])
 
-  if (!editor) return <div className="rich-text-loading">Loading editor…</div>
-
   const counts = useEditorState({
     editor,
     selector: ({ editor: currentEditor }) => {
@@ -174,6 +172,8 @@ export default function RichTextEditor({ value, onChange, editable = true, edito
       }
     },
   })
+
+  if (!editor) return <div className="rich-text-loading">Loading editor…</div>
 
   return (
     <div className={`rich-text-editor ${editable ? '' : 'rich-text-readonly'}`}>
