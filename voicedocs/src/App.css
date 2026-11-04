@@ -298,3 +298,65 @@
 
 .rich-text-content .rich-text-image { display: block; max-width: 100%; height: auto; max-height: 640px; object-fit: contain; margin: 14px auto; border-radius: 6px; }
 .rich-text-readonly .rich-text-content .rich-text-image { pointer-events: none; }
+
+
+/* Google Drive recordings panel */
+.drive-panel {
+  margin-top: 24px;
+  padding: 22px 24px;
+  border: 1px solid #e5e9f2;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 8px 28px rgba(24,39,75,.04);
+}
+.drive-panel-heading,.drive-panel-title,.drive-connection-row,.recordings-list-heading,.recording-row,.recording-actions {
+  display: flex;
+  align-items: center;
+}
+.drive-panel-heading,.drive-connection-row,.recordings-list-heading {
+  justify-content: space-between;
+  gap: 14px;
+}
+.drive-panel-title { gap: 12px; }
+.drive-panel-title h2 { margin: 0; color: #172033; font-size: 17px; letter-spacing: -.025em; }
+.drive-panel-title .card-label { margin-bottom: 5px; }
+.drive-panel-icon,.recording-file-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  color: #4056d4;
+  background: #eef0ff;
+}
+.drive-connection-row {
+  margin-top: 18px;
+  padding: 15px;
+  border: 1px solid #edf0f5;
+  border-radius: 11px;
+  background: #fafbff;
+}
+.drive-connection-row strong { color: #344054; font-size: 13px; }
+.drive-connection-row p { margin: 5px 0 0; color: #8a94a6; font-size: 11px; }
+.drive-connect-button { margin: 0; min-height: 38px; }
+.recordings-list { margin-top: 20px; }
+.recordings-list-heading { margin-bottom: 10px; color: #344054; font-size: 12px; }
+.recordings-list-heading span,.drive-muted { color: #98a1b2; font-size: 11px; }
+.drive-muted { line-height: 1.6; }
+.recording-row { gap: 12px; padding: 12px 0; border-top: 1px solid #edf0f5; }
+.recording-file-icon { width: 36px; height: 36px; border-radius: 10px; }
+.recording-file-details { display: grid; flex: 1; min-width: 0; gap: 5px; }
+.recording-file-details strong { overflow: hidden; color: #344054; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.recording-file-details span { color: #98a1b2; font-size: 10px; }
+.recording-actions { gap: 6px; }
+.recording-actions .icon-button { width: 32px; height: 32px; }
+.recording-delete:hover { color: #b42318; background: #fff3f1; }
+.drive-panel .alert { margin-top: 14px; margin-bottom: 0; }
+@media (max-width: 640px) {
+  .drive-panel { padding: 17px 15px; }
+  .drive-connection-row { align-items: flex-start; flex-direction: column; }
+  .drive-connect-button { width: 100%; }
+  .recording-row { align-items: flex-start; }
+  .recording-actions { flex-wrap: wrap; }
+}
