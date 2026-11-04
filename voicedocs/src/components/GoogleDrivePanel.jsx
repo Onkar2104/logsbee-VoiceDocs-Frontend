@@ -49,10 +49,11 @@ export default function GoogleDrivePanel() {
 
   useEffect(() => {
     void load()
-    return () => {
-      if (playingUrl) URL.revokeObjectURL(playingUrl)
-    }
-  }, [load, playingUrl])
+  }, [load])
+
+  useEffect(() => () => {
+    if (playingUrl) URL.revokeObjectURL(playingUrl)
+  }, [playingUrl])
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
