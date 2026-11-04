@@ -4,6 +4,22 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../context/useAuth'
 import { createDocument, deleteDocument, fetchDocuments, fetchSharingSummary } from '../features/documents/documentsApi'
 
+function getDocumentPreview(content) {
+  if (!content?.trim()) return ''
+  return content
+    .replace(/<br\s*\/?\s*>/gi, ' ')
+    .replace(/<\/(p|h[1-6]|li|div|blockquote|tr)>/gi, ' ')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&#x27;/gi, "'")
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 function formatDate(value) {
   if (!value) return 'Recently updated'
   return new Intl.DateTimeFormat(undefined, {
@@ -28,6 +44,7 @@ export default function DashboardPage() {
 
   const fullName = [user?.first_name, user?.last_name].filter(Boolean).join(' ')
   const isAccountAdmin = user?.role?.name?.trim().toLowerCase() === 'admin'
+  const currentSection = activeSection === 'shared_by_me' && sharedByMeCount === 0 ? 'my' : activeSection
 
   const loadSharingSummary = useCallback(async () => {
     try {
@@ -42,40 +59,46 @@ export default function DashboardPage() {
     setIsLoading(true)
     setError('')
     try {
-      const result = await fetchDocuments(activeSection)
+      const result = await fetchDocuments(currentSection)
       setDocuments(Array.isArray(result) ? result : [])
     } catch (requestError) {
       setError(requestError.response?.data?.detail || 'Could not load your documents. Please try again.')
     } finally {
       setIsLoading(false)
     }
-  }, [activeSection])
+  }, [currentSection])
 
   useEffect(() => {
-    loadDocuments()
+    let cancelled = false
+    const startLoading = async () => {
+      await Promise.resolve()
+      if (!cancelled) await loadDocuments()
+    }
+    void startLoading()
+    return () => { cancelled = true }
   }, [loadDocuments])
 
   useEffect(() => {
-    loadSharingSummary()
-  }, [loadSharingSummary])
-
-  useEffect(() => {
-    if (activeSection === 'shared_by_me' && sharedByMeCount === 0) {
-      setActiveSection('my')
+    let cancelled = false
+    const startLoading = async () => {
+      await Promise.resolve()
+      if (!cancelled) await loadSharingSummary()
     }
-  }, [activeSection, sharedByMeCount])
+    void startLoading()
+    return () => { cancelled = true }
+  }, [loadSharingSummary])
 
   const visibleDocuments = useMemo(() => {
     const query = search.trim().toLowerCase()
     return documents.filter((document) => {
-      const belongsInSection = activeSection === 'my'
+      const belongsInSection = currentSection === 'my'
         ? document.owner_user_id === user?.id
-        : activeSection === 'shared'
+        : currentSection === 'shared'
           ? Boolean(document.shared_by_user_id)
           : true
       return belongsInSection && (!query || document.title?.toLowerCase().includes(query))
     })
-  }, [documents, search, user?.id, activeSection])
+  }, [documents, search, user?.id, currentSection])
 
   async function handleCreate(event) {
     event.preventDefault()
@@ -244,7 +267,7 @@ export default function DashboardPage() {
                   <Link className="document-open-link" to={`/documents/${document.id}`} aria-label={`Open ${document.title}`}>
                     <h3>{document.title}</h3>
                   </Link>
-                  <p className="document-preview">{document.content?.trim() || (activeSection === 'my' ? 'No content yet. Open this document to add your notes.' : 'No content yet. Open this document to view it.')}</p>
+                  <p className="document-preview">{getDocumentPreview(document.content) || (activeSection === 'my' ? 'No content yet. Open this document to add your notes.' : 'No content yet. Open this document to view it.')}</p>
                   <div className="document-card-footer">
                     <span><Clock3 size={14} /> {formatDate(document.updated_at)}</span>
                     <span>{activeSection === 'my' ? 'Owned by you' : activeSection === 'shared' ? 'Shared with you' : 'Shared by you'}</span>
