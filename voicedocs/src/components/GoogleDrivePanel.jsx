@@ -48,23 +48,39 @@ export default function GoogleDrivePanel() {
   }, [])
 
   useEffect(() => {
-    void load()
-  }, [load])
+    let cancelled = false
+
+    async function initialize() {
+      try {
+        const connection = await fetchGoogleDriveStatus()
+        if (cancelled) return
+        setStatus(connection)
+        if (connection.connected) {
+          const items = await fetchRecordings()
+          if (!cancelled) setRecordings(Array.isArray(items) ? items : [])
+        } else {
+          setRecordings([])
+        }
+      } catch (requestError) {
+        if (!cancelled) {
+          setError(requestError.response?.data?.detail || 'Could not load Google Drive recordings.')
+        }
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    const params = new URLSearchParams(window.location.search)
+    if (params.has('google_drive')) {
+      window.history.replaceState({}, '', window.location.pathname)
+    }
+    void initialize()
+    return () => { cancelled = true }
+  }, [])
 
   useEffect(() => () => {
     if (playingUrl) URL.revokeObjectURL(playingUrl)
   }, [playingUrl])
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    const driveState = params.get('google_drive')
-    if (driveState) {
-      if (driveState === 'connected') {
-        window.history.replaceState({}, '', window.location.pathname)
-      }
-      void load()
-    }
-  }, [load])
 
   async function handleConnect() {
     setBusy('connect')
