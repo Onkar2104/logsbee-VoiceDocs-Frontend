@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Node, mergeAttributes } from '@tiptap/core'
-import { EditorContent, useEditor } from '@tiptap/react'
+import { EditorContent, useEditor, useEditorState } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import TextAlign from '@tiptap/extension-text-align'
 import Placeholder from '@tiptap/extension-placeholder'
@@ -164,11 +164,16 @@ export default function RichTextEditor({ value, onChange, editable = true, edito
 
   if (!editor) return <div className="rich-text-loading">Loading editor…</div>
 
-  const editorText = editor.getText()
-  const counts = {
-    words: editorText.trim() ? editorText.trim().split(/\\s+/).length : 0,
-    characters: editorText.length,
-  }
+  const counts = useEditorState({
+    editor,
+    selector: ({ editor: currentEditor }) => {
+      const text = currentEditor?.getText() || ''
+      return {
+        words: text.trim() ? text.trim().split(/\\s+/).length : 0,
+        characters: text.length,
+      }
+    },
+  })
 
   return (
     <div className={`rich-text-editor ${editable ? '' : 'rich-text-readonly'}`}>
