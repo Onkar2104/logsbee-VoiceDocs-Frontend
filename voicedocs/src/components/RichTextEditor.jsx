@@ -71,7 +71,6 @@ const TOOL_GROUPS = [
 ]
 
 export default function RichTextEditor({ value, onChange, editable = true, editorRef, placeholder = 'Start writing your document…' }) {
-  const [counts, setCounts] = useState({ words: 0, characters: 0 })
   const [initialContent] = useState(() => toEditorContent(value || ''))
   const imageInputRef = useRef(null)
   function handleImageSelected(event) {
@@ -140,18 +139,6 @@ export default function RichTextEditor({ value, onChange, editable = true, edito
     },
     onUpdate: ({ editor: currentEditor }) => {
       onChange?.(currentEditor.getHTML())
-      const text = currentEditor.getText()
-      setCounts({
-        words: text.trim() ? text.trim().split(/\s+/).length : 0,
-        characters: text.length,
-      })
-    },
-    onCreate: ({ editor: currentEditor }) => {
-      const text = currentEditor.getText()
-      setCounts({
-        words: text.trim() ? text.trim().split(/\s+/).length : 0,
-        characters: text.length,
-      })
     },
   })
 
@@ -165,11 +152,6 @@ export default function RichTextEditor({ value, onChange, editable = true, edito
     const nextContent = toEditorContent(value || '')
     if (editor.getHTML() !== nextContent) {
       editor.commands.setContent(nextContent, { emitUpdate: false })
-      const text = editor.getText()
-      setCounts({
-        words: text.trim() ? text.trim().split(/\s+/).length : 0,
-        characters: text.length,
-      })
     }
   }, [editor, value])
 
@@ -181,6 +163,12 @@ export default function RichTextEditor({ value, onChange, editable = true, edito
   }, [editor, editorRef])
 
   if (!editor) return <div className="rich-text-loading">Loading editor…</div>
+
+  const editorText = editor.getText()
+  const counts = {
+    words: editorText.trim() ? editorText.trim().split(/\\s+/).length : 0,
+    characters: editorText.length,
+  }
 
   return (
     <div className={`rich-text-editor ${editable ? '' : 'rich-text-readonly'}`}>
