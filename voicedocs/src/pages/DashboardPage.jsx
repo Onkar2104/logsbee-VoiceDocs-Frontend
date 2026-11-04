@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { FileText, Plus, Search, RefreshCw, Trash2, Clock3, Files } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import GoogleDrivePanel from '../components/GoogleDrivePanel'
 import { useAuth } from '../context/useAuth'
 import { createDocument, deleteDocument, fetchDocuments, fetchSharingSummary } from '../features/documents/documentsApi'
 
@@ -169,6 +170,8 @@ export default function DashboardPage() {
             <div><span>Email verified</span><strong>{user?.is_email_verified ? 'Yes' : 'No'}</strong></div>
           </div>
         </article>
+
+        <GoogleDrivePanel />
 
         {isCreating && (
           <form className="document-form-card" onSubmit={handleCreate}>
