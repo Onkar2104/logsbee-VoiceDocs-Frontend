@@ -23,9 +23,6 @@
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "react-router-dom": "^7.18.5",
-<<<<<<< HEAD
-    "tailwindcss": "^4.3.3"
-=======
     "tailwindcss": "^4.3.3",
     "@tiptap/react": "^3.0.0",
     "@tiptap/starter-kit": "^3.0.0",
@@ -34,7 +31,6 @@
     "@tiptap/extension-link": "^3.0.0",
     "html2pdf.js": "^0.10.3",
     "docx": "^9.5.1"
->>>>>>> 94b021f0b6e9993d9c28676b7aeda65cd42f681f
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
