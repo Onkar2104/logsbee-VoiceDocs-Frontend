@@ -23,14 +23,7 @@
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "react-router-dom": "^7.18.5",
-    "tailwindcss": "^4.3.3",
-    "@tiptap/react": "^3.0.0",
-    "@tiptap/starter-kit": "^3.0.0",
-    "@tiptap/extension-text-align": "^3.0.0",
-    "@tiptap/extension-placeholder": "^3.0.0",
-    "@tiptap/extension-link": "^3.0.0",
-    "html2pdf.js": "^0.10.3",
-    "docx": "^9.5.1"
+    "tailwindcss": "^4.3.3"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
