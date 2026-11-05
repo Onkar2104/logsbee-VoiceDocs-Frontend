@@ -14,7 +14,17 @@ function normalizeContent(content) {
 }
 
 function safeFileName(title) {
-  return (title || 'VoiceDocs document').replace(/[<>:"/\\|?*\u0000-\u001F]/g, '-').replace(/\s+/g, ' ').trim().slice(0, 120) || 'VoiceDocs document'
+  return (title || 'VoiceDocs document')
+    .replace(/[<>:"/\\|?*]/g, '-')
+    .split('')
+    .map((character) => {
+      const code = character.charCodeAt(0)
+      return code < 32 || code === 127 ? '-' : character
+    })
+    .join('')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 120) || 'VoiceDocs document'
 }
 
 function buildExportHtml(title, content) {
