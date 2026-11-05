@@ -360,3 +360,59 @@
   .recording-row { align-items: flex-start; }
   .recording-actions { flex-wrap: wrap; }
 }
+
+
+/* Document export dropdown */
+.document-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.document-download-wrap {
+  position: relative;
+}
+.document-download-button {
+  min-height: 36px;
+  gap: 8px;
+  padding: 0 12px;
+}
+.document-download-menu {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 7px);
+  right: 0;
+  display: grid;
+  min-width: 210px;
+  padding: 6px;
+  border: 1px solid #e5e9f2;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 12px 30px rgba(24,39,75,.14);
+}
+.document-download-menu button {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 10px 11px;
+  border: 0;
+  border-radius: 7px;
+  color: #344054;
+  background: transparent;
+  font-size: 12px;
+  text-align: left;
+  white-space: nowrap;
+}
+.document-download-menu button:hover:not(:disabled) {
+  color: #4056d4;
+  background: #f2f4ff;
+}
+.document-download-menu button:disabled {
+  cursor: wait;
+  opacity: .55;
+}
+@media (max-width: 640px) {
+  .document-toolbar-actions { gap: 6px; }
+  .document-download-button { padding: 0 9px; }
+  .document-download-menu { right: 0; min-width: 195px; }
+}
