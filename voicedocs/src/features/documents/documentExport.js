@@ -1,5 +1,12 @@
 import html2pdf from 'html2pdf.js'
-import HTMLtoDOCX from 'html-to-docx'
+import {
+  AlignmentType,
+  Document,
+  HeadingLevel,
+  Packer,
+  Paragraph,
+  TextRun,
+} from 'docx'
 
 function escapeHtml(value) {
   return String(value || '').replace(/[&<>"']/g, (character) => ({
@@ -33,6 +40,68 @@ function buildExportHtml(title, content) {
     '</head><body><h1>' + escapeHtml(title) + '</h1>' + normalizeContent(content) + '</body></html>'
 }
 
+function textRunsFromNode(node, marks = {}) {
+  if (node.nodeType === Node.TEXT_NODE) {
+    return node.nodeValue ? [new TextRun({ text: node.nodeValue, ...marks })] : []
+  }
+
+  if (node.nodeType !== Node.ELEMENT_NODE) return []
+
+  const tag = node.tagName.toLowerCase()
+  if (tag === 'br') return [new TextRun({ text: '\n', ...marks })]
+  if (tag === 'img') {
+    const alt = node.getAttribute('alt')
+    return alt ? [new TextRun({ text: '[Image: ' + alt + ']', italics: true })] : []
+  }
+
+  const nextMarks = {
+    ...marks,
+    ...(tag === 'strong' || tag === 'b' ? { bold: true } : {}),
+    ...(tag === 'em' || tag === 'i' ? { italics: true } : {}),
+    ...(tag === 'u' ? { underline: {} } : {}),
+    ...(tag === 's' || tag === 'del' ? { strike: true } : {}),
+    ...(tag === 'code' ? { font: 'Consolas' } : {}),
+  }
+
+  return Array.from(node.childNodes).flatMap((child) => textRunsFromNode(child, nextMarks))
+}
+
+function paragraphFromElement(element) {
+  const tag = element.tagName.toLowerCase()
+  const runs = Array.from(element.childNodes).flatMap((node) => textRunsFromNode(node))
+  const options = { children: runs.length ? runs : [new TextRun(' ')] }
+
+  if (/^h[1-6]$/.test(tag)) {
+    const level = Number(tag.slice(1))
+    options.heading = [HeadingLevel.HEADING_1, HeadingLevel.HEADING_2, HeadingLevel.HEADING_3,
+      HeadingLevel.HEADING_4, HeadingLevel.HEADING_5, HeadingLevel.HEADING_6][level - 1]
+  }
+
+  if (tag === 'li') options.bullet = { indent: 360 }
+  if (tag === 'blockquote') options.indent = { left: 720 }
+  if (element.style?.textAlign === 'center') options.alignment = AlignmentType.CENTER
+  if (element.style?.textAlign === 'right') options.alignment = AlignmentType.RIGHT
+  return new Paragraph(options)
+}
+
+function htmlToWordParagraphs(html) {
+  const parsed = new DOMParser().parseFromString(html, 'text/html')
+  const body = parsed.body
+  const blocks = Array.from(body.querySelectorAll('h1,h2,h3,h4,h5,h6,p,li,blockquote,pre'))
+  const topLevelBlocks = blocks.filter((element) => !element.parentElement.closest('li,blockquote,pre'))
+  const paragraphs = topLevelBlocks.map((element) => paragraphFromElement(element))
+
+  body.querySelectorAll('table tr').forEach((row) => {
+    const cells = Array.from(row.querySelectorAll('th,td')).map((cell) => cell.textContent.trim())
+    if (cells.length) paragraphs.push(new Paragraph({ children: [new TextRun(cells.join('   |   '))] }))
+  })
+
+  if (!paragraphs.length && body.textContent.trim()) {
+    paragraphs.push(new Paragraph({ text: body.textContent.trim() }))
+  }
+  return paragraphs
+}
+
 export async function downloadDocumentPdf(title, content) {
   const container = document.createElement('div')
   container.innerHTML = buildExportHtml(title, content)
@@ -51,9 +120,13 @@ export async function downloadDocumentPdf(title, content) {
 }
 
 export async function downloadDocumentWord(title, content) {
-  const blob = await HTMLtoDOCX(buildExportHtml(title, content), null, {
-    table: { row: { cantSplit: true } }, pageNumber: true, footer: true,
-  })
+  const html = buildExportHtml(title, content)
+  const children = [
+    new Paragraph({ text: title || 'VoiceDocs document', heading: HeadingLevel.TITLE }),
+    ...htmlToWordParagraphs(html),
+  ]
+  const wordDocument = new Document({ sections: [{ children }] })
+  const blob = await Packer.toBlob(wordDocument)
   const url = URL.createObjectURL(blob)
   const anchor = document.createElement('a')
   anchor.href = url
