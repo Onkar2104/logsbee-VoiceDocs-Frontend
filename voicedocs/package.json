@@ -11,7 +11,14 @@
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",
+    "@tiptap/extension-link": "^3.0.0",
+    "@tiptap/extension-placeholder": "^3.0.0",
+    "@tiptap/extension-text-align": "^3.0.0",
+    "@tiptap/react": "^3.0.0",
+    "@tiptap/starter-kit": "^3.0.0",
     "axios": "^1.21.0",
+    "docx": "^9.15.2",
+    "html2pdf.js": "^0.10.3",
     "lucide-react": "^1.66.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
@@ -21,7 +28,9 @@
     "@tiptap/starter-kit": "^3.0.0",
     "@tiptap/extension-text-align": "^3.0.0",
     "@tiptap/extension-placeholder": "^3.0.0",
-    "@tiptap/extension-link": "^3.0.0"
+    "@tiptap/extension-link": "^3.0.0",
+    "html2pdf.js": "^0.10.3",
+    "docx": "^9.5.1"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
