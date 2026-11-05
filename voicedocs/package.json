@@ -21,7 +21,9 @@
     "@tiptap/starter-kit": "^3.0.0",
     "@tiptap/extension-text-align": "^3.0.0",
     "@tiptap/extension-placeholder": "^3.0.0",
-    "@tiptap/extension-link": "^3.0.0"
+    "@tiptap/extension-link": "^3.0.0",
+    "html2pdf.js": "^0.10.3",
+    "html-to-docx": "^1.8.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
