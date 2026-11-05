@@ -9,12 +9,12 @@ function escapeHtml(value) {
 
 function normalizeContent(content) {
   if (!content) return '<p></p>'
-  if (/<\\/?[a-z][\\s\\S]*>/i.test(content)) return content
-  return content.split(/\\r?\\n/).map((line) => '<p>' + (escapeHtml(line) || '<br>') + '</p>').join('')
+  if (/<\/?[a-z][\s\S]*>/i.test(content)) return content
+  return content.split(/\r?\n/).map((line) => '<p>' + (escapeHtml(line) || '<br>') + '</p>').join('')
 }
 
 function safeFileName(title) {
-  return (title || 'VoiceDocs document').replace(/[<>:"/\\\\|?*\\u0000-\\u001F]/g, '-').replace(/\\s+/g, ' ').trim().slice(0, 120) || 'VoiceDocs document'
+  return (title || 'VoiceDocs document').replace(/[<>:"/\\|?*\u0000-\u001F]/g, '-').replace(/\s+/g, ' ').trim().slice(0, 120) || 'VoiceDocs document'
 }
 
 function buildExportHtml(title, content) {
