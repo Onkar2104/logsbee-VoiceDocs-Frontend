@@ -120,7 +120,7 @@ export async function downloadDocumentPdf(title, content) {
 }
 
 export async function downloadDocumentWord(title, content) {
-  const html = buildExportHtml(title, content)
+  const html = normalizeContent(content)
   const children = [
     new Paragraph({ text: title || 'VoiceDocs document', heading: HeadingLevel.TITLE }),
     ...htmlToWordParagraphs(html),
