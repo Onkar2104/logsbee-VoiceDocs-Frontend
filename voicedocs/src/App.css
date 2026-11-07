@@ -83,7 +83,7 @@
 .delete-button { width: 32px; height: 32px; border-color: transparent; }
 .delete-button:hover { color: #b42318; background: #fff3f1; }
 .document-card h3 { overflow: hidden; margin: 17px 0 7px; color: #263248; font-size: 14px; font-weight: 750; text-overflow: ellipsis; white-space: nowrap; }
-.document-preview { display: -webkit-box; overflow: hidden; min-height: 38px; margin: 0; color: #8a94a6; font-size: 11px; line-height: 1.6; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.document-preview { display: -webkit-box; overflow: hidden; min-height: 38px; margin: 0; color: #8a94a6; font-size: 11px; line-height: 1.6; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; }
 .document-card-footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: auto; padding-top: 17px; color: #98a1b2; font-size: 10px; }
 .document-card-footer span { display: inline-flex; align-items: center; gap: 5px; }
 .document-form-card { margin-top: 20px; }
@@ -361,58 +361,12 @@
   .recording-actions { flex-wrap: wrap; }
 }
 
-
-/* Document export dropdown */
-.document-toolbar-actions {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-}
-.document-download-wrap {
-  position: relative;
-}
-.document-download-button {
-  min-height: 36px;
-  gap: 8px;
-  padding: 0 12px;
-}
-.document-download-menu {
-  position: absolute;
-  z-index: 20;
-  top: calc(100% + 7px);
-  right: 0;
-  display: grid;
-  min-width: 210px;
-  padding: 6px;
-  border: 1px solid #e5e9f2;
-  border-radius: 10px;
-  background: #fff;
-  box-shadow: 0 12px 30px rgba(24,39,75,.14);
-}
-.document-download-menu button {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  width: 100%;
-  padding: 10px 11px;
-  border: 0;
-  border-radius: 7px;
-  color: #344054;
-  background: transparent;
-  font-size: 12px;
-  text-align: left;
-  white-space: nowrap;
-}
-.document-download-menu button:hover:not(:disabled) {
-  color: #4056d4;
-  background: #f2f4ff;
-}
-.document-download-menu button:disabled {
-  cursor: wait;
-  opacity: .55;
-}
-@media (max-width: 640px) {
-  .document-toolbar-actions { gap: 6px; }
-  .document-download-button { padding: 0 9px; }
-  .document-download-menu { right: 0; min-width: 195px; }
-}
+.auth-signup-link { margin: 20px 0 0; color: #697386; font-size: 12px; text-align: center; }
+.auth-signup-link a { color: #5268e8; font-weight: 700; }
+.register-card { width: min(100%, 560px); }
+.register-form h2 { margin: 18px 0 2px; padding-bottom: 9px; border-bottom: 1px solid #edf0f5; color: #344054; font-size: 14px; }
+.register-form textarea { width: 100%; padding: 12px 14px; border: 1px solid #dce2ed; border-radius: 10px; outline: none; color: #172033; font: inherit; font-size: 13px; resize: vertical; }
+.register-form textarea:focus { border-color: #6578ed; box-shadow: 0 0 0 3px rgba(101,120,237,.13); }
+.register-two-column { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
+.register-two-column > div { min-width: 0; }
+@media (max-width: 480px) { .register-two-column { grid-template-columns: 1fr; gap: 0; } }
