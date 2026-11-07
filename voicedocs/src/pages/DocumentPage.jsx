@@ -15,7 +15,8 @@ function formatDate(value) {
 
 export default function DocumentPage() {
   const { documentId } = useParams()
-  const isNewDocument = documentId === 'new'
+  // /documents/new is currently matched by a static route, so documentId can be undefined.
+  const isNewDocument = !documentId || documentId === 'new'
   const navigate = useNavigate()
   const { user } = useAuth()
   const [document, setDocument] = useState(null)
