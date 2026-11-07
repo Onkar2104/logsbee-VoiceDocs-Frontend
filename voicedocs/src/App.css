@@ -360,3 +360,13 @@
   .recording-row { align-items: flex-start; }
   .recording-actions { flex-wrap: wrap; }
 }
+
+.auth-signup-link { margin: 20px 0 0; color: #697386; font-size: 12px; text-align: center; }
+.auth-signup-link a { color: #5268e8; font-weight: 700; }
+.register-card { width: min(100%, 560px); }
+.register-form h2 { margin: 18px 0 2px; padding-bottom: 9px; border-bottom: 1px solid #edf0f5; color: #344054; font-size: 14px; }
+.register-form textarea { width: 100%; padding: 12px 14px; border: 1px solid #dce2ed; border-radius: 10px; outline: none; color: #172033; font: inherit; font-size: 13px; resize: vertical; }
+.register-form textarea:focus { border-color: #6578ed; box-shadow: 0 0 0 3px rgba(101,120,237,.13); }
+.register-two-column { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
+.register-two-column > div { min-width: 0; }
+@media (max-width: 480px) { .register-two-column { grid-template-columns: 1fr; gap: 0; } }
