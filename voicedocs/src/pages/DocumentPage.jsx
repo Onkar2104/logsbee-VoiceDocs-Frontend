@@ -14,6 +14,7 @@ function formatDate(value) {
 
 export default function DocumentPage() {
   const { documentId } = useParams()
+  const isNewDocument = documentId === 'new'
   const navigate = useNavigate()
   const { user } = useAuth()
   const [document, setDocument] = useState(null)
@@ -29,9 +30,18 @@ export default function DocumentPage() {
   const contentTextareaRef = useRef(null)
 
   const isAccountAdmin = user?.role?.name?.trim().toLowerCase() === 'admin'
-  const canManage = Boolean(document && (isAccountAdmin || document.owner_user_id === user?.id))
+  // A newly opened draft belongs to the current user and must be editable
+  // before it has a persisted owner_user_id from the API.
+  const canManage = Boolean(isNewDocument || (document && (isAccountAdmin || document.owner_user_id === user?.id)))
 
   const loadDocument = useCallback(async () => {
+    if (isNewDocument) {
+      setDocument({ id: 'new', title: '', content: '', updated_at: null, owner_user_id: user?.id })
+      setTitle('')
+      setContent('')
+      setIsLoading(false)
+      return
+    }
     setIsLoading(true)
     setError('')
     try {
@@ -44,7 +54,7 @@ export default function DocumentPage() {
     } finally {
       setIsLoading(false)
     }
-  }, [documentId])
+  }, [documentId, isNewDocument, user?.id])
 
   useEffect(() => {
     let cancelled = false
@@ -73,11 +83,14 @@ export default function DocumentPage() {
     setError('')
     setNotice('')
     try {
-      const updated = await updateDocument(documentId, { title: title.trim(), content })
+      const updated = isNewDocument
+        ? await createDocument({ title: title.trim(), content })
+        : await updateDocument(documentId, { title: title.trim(), content })
       setDocument(updated)
       setTitle(updated.title)
       setContent(updated.content)
-      setNotice('Your changes have been saved.')
+      setNotice(isNewDocument ? 'Your document has been created.' : 'Your changes have been saved.')
+      if (isNewDocument) navigate(`/documents/${updated.id}`, { replace: true })
     } catch (requestError) {
       setError(requestError.response?.data?.detail || 'Could not save your changes.')
     } finally {
@@ -132,7 +145,12 @@ export default function DocumentPage() {
   }
 
   if (isLoading) {
-    return <main className="document-page-shell"><div className="documents-state">Loading document…</div></main>
+    return (
+      <main className="document-page-shell workspace-with-sidebar">
+        <WorkspaceSidebar />
+        <section className="document-page-content"><div className="documents-state">Loading document…</div></section>
+      </main>
+    )
   }
 
   if (error && !document) {
@@ -146,21 +164,25 @@ export default function DocumentPage() {
     )
   }
 
-  if (!document) return null
+  if (!document) {
+    return (
+      <main className="document-page-shell workspace-with-sidebar">
+        <WorkspaceSidebar />
+        <section className="document-page-content">
+          <div className="document-editor-card"><p className="alert alert-error">The document could not be opened. Please return to your documents and try again.</p><Link className="back-link" to="/documents"><ArrowLeft size={16} /> Back to documents</Link></div>
+        </section>
+      </main>
+    )
+  }
 
   return (
-    <main className="document-page-shell">
-      <header className="document-page-header">
-        <Link className="dashboard-brand" to="/">
-          <span className="brand-mark brand-mark-small">V</span><span>VoiceDocs</span>
-        </Link>
-        <Link className="back-link" to="/"><ArrowLeft size={16} /> All documents</Link>
-      </header>
+    <main className="document-page-shell workspace-with-sidebar">
+      <WorkspaceSidebar />
 
       <section className="document-page-content">
         <div className="document-page-meta">
           <div className="document-title-icon"><FileText size={21} /></div>
-          <div><p className="eyebrow">DOCUMENT WORKSPACE</p><h1>{document.title}</h1></div>
+          <div><p className="eyebrow">DOCUMENT WORKSPACE</p><h1>{isNewDocument ? 'Untitled document' : document.title}</h1></div>
         </div>
         <div className="document-editor-card">
           <div className="editor-toolbar">
@@ -199,14 +221,14 @@ export default function DocumentPage() {
           {notice && <p className="alert alert-success" role="status">{notice}</p>}
           {canManage ? (
             <form onSubmit={handleSave} className="document-editor-form">
-              <label htmlFor="edit-document-title">Document title</label>
-              <input id="edit-document-title" value={title} onChange={(event) => setTitle(event.target.value)} maxLength={255} />
+              <label htmlFor="edit-document-title">Document title <span className="required-label">*</span></label>
+              <input id="edit-document-title" value={title} onChange={(event) => setTitle(event.target.value)} maxLength={255} required placeholder="Enter a document title" />
               <label htmlFor="edit-document-content">Content</label>
               <VoiceDictation onTranscript={handleTranscriptInsert} />
               <RichTextEditor editorRef={contentTextareaRef} value={content} onChange={setContent} />
               <div className="editor-actions">
-                <span className="editor-hint">Changes are saved to your VoiceDocs workspace.</span>
-                <button className="primary-button save-button" type="submit" disabled={isSaving}><Save size={16} /> {isSaving ? 'Saving…' : 'Save changes'}</button>
+                <span className="editor-hint">{isNewDocument ? 'A title is required to create this document.' : 'Changes are saved to your VoiceDocs workspace.'}</span>
+                <button className="primary-button save-button" type="submit" disabled={isSaving || !title.trim()}><Save size={16} /> {isSaving ? 'Saving…' : isNewDocument ? 'Create document' : 'Save changes'}</button>
               </div>
             </form>
           ) : (
