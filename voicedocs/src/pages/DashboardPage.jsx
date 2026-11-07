@@ -3,7 +3,7 @@ import { FileText, Plus, Search, RefreshCw, Trash2, Clock3, Files } from 'lucide
 import { Link, useNavigate } from 'react-router-dom'
 import WorkspaceSidebar from '../components/WorkspaceSidebar'
 import { useAuth } from '../context/useAuth'
-import { createDocument, deleteDocument, fetchDocuments, fetchSharingSummary } from '../features/documents/documentsApi'
+import { deleteDocument, fetchDocuments, fetchSharingSummary } from '../features/documents/documentsApi'
 
 function getDocumentPreview(content) {
   if (!content?.trim()) return ''
