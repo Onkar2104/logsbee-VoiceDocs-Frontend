@@ -24,6 +24,7 @@ export function setAccessToken(token) {
 
 export function clearAccessToken() {
   accessToken = null
+  if (typeof window !== 'undefined') window.localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY)
 }
 
 api.interceptors.request.use((config) => {
