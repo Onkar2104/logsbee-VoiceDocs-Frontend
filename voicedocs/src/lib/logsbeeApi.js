@@ -32,3 +32,29 @@ export async function refreshLogsbeeToken(refreshToken) {
   })
   return response.data
 }
+
+export async function registerAccount(payload) {
+  const response = await logsbeeApi.post('/accounts/register', payload)
+  return response.data
+}
+
+export async function resendRegistrationOtp(accountId, verificationType) {
+  const response = await logsbeeApi.post('/accounts/register/resend-otp', {
+    account_id: accountId,
+    verification_type: verificationType,
+  })
+  return response.data
+}
+
+export async function verifyAccountEmail(accountId, otp) {
+  const response = await logsbeeApi.post('/accounts/register/verify-account-email', {
+    account_id: accountId,
+    otp,
+  })
+  return response.data
+}
+
+export async function verifyRegistrationEmail(userId, otp) {
+  const response = await logsbeeApi.post(`/users/${userId}/verification/email`, { otp })
+  return response.data
+}
