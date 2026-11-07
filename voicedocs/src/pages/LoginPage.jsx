@@ -119,6 +119,9 @@ export default function LoginPage() {
             </button>
           </form>
         )}
+        {step === 'password' && (
+          <p className="auth-signup-link">New to VoiceDocs? <a href="/register">Create an organization account</a></p>
+        )}
         <p className="auth-footnote">Authentication is managed securely by Logsbee User Management.</p>
       </section>
     </main>
