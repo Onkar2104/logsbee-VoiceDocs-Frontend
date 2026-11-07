@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { getApiErrorMessage } from '../lib/api'
 import {
@@ -31,6 +31,15 @@ export default function RegisterPage() {
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [resendCountdown, setResendCountdown] = useState(0)
+
+  useEffect(() => {
+    if (resendCountdown <= 0) return undefined
+    const timerId = window.setTimeout(() => {
+      setResendCountdown((seconds) => Math.max(0, seconds - 1))
+    }, 1000)
+    return () => window.clearTimeout(timerId)
+  }, [resendCountdown])
 
   function updateField(event) {
     setForm((current) => ({ ...current, [event.target.name]: event.target.value }))
