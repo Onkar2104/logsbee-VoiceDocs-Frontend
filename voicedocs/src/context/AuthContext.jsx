@@ -26,14 +26,10 @@ export function AuthProvider({ children }) {
     setAccessToken(tokens.access_token)
     setLogsbeeAccessToken(tokens.access_token)
     if (tokens.refresh_token) saveRefreshToken(tokens.refresh_token)
-    try {
-      const currentUser = await fetchCurrentUser()
-      setUser(currentUser)
-      setIsAuthenticated(true)
-      return currentUser
-    } catch (error) {
-      throw error
-    }
+    const currentUser = await fetchCurrentUser()
+    setUser(currentUser)
+    setIsAuthenticated(true)
+    return currentUser
   }, [])
 
   useEffect(() => {
