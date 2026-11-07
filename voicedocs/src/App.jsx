@@ -17,6 +17,7 @@ function App() {
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/documents" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
           <Route path="/documents/new" element={<ProtectedRoute><DocumentPage /></ProtectedRoute>} />
           <Route path="/documents/:documentId" element={<ProtectedRoute><DocumentPage /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
