@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { AudioLines, Mic, Square, Upload } from 'lucide-react'
+import { AudioLines, LoaderCircle, Mic, Square, Upload } from 'lucide-react'
 import { transcribeAudio } from '../features/documents/documentsApi'
 
 const LANGUAGES = [
@@ -202,6 +202,7 @@ export default function VoiceDictation({ onTranscript }) {
             <span>{isRecording ? (mode === 'live' ? 'Listening · live dictation' : 'Recording audio') : isTranscribing ? 'Transcribing audio…' : 'Transcript ready'}</span>
             {detectedLanguage && <span>Detected: {detectedLanguage.toUpperCase()}</span>}
           </div>
+          {isTranscribing && <div className="voice-processing-indicator"><LoaderCircle className="spin-icon" size={18} /><span>Processing your audio and generating the transcript. Please wait…</span></div>}
           <p>{preview || (isRecording ? 'Speak clearly. Your transcript will appear here…' : 'Preparing transcript…')}</p>
           {mode === 'live' && isRecording && <small>Speak naturally. Whisper will transcribe the complete recording when you stop.</small>}
         </div>
