@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Settings } from 'lucide-react'
 import { useAuth } from '../context/useAuth'
 import WorkspaceSidebar from '../components/WorkspaceSidebar'
 
