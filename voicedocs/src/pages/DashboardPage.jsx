@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { FileText, Plus, Search, RefreshCw, Trash2, Clock3, Files } from 'lucide-react'
-import { Link } from 'react-router-dom'
-import GoogleDrivePanel from '../components/GoogleDrivePanel'
+import { Link, useNavigate } from 'react-router-dom'
+import WorkspaceSidebar from '../components/WorkspaceSidebar'
 import { useAuth } from '../context/useAuth'
 import { createDocument, deleteDocument, fetchDocuments, fetchSharingSummary } from '../features/documents/documentsApi'
 
@@ -30,7 +30,8 @@ function formatDate(value) {
 }
 
 export default function DashboardPage() {
-  const { user, logout } = useAuth()
+  const { user } = useAuth()
+  const navigate = useNavigate()
   const [documents, setDocuments] = useState([])
   const [activeSection, setActiveSection] = useState('my')
   const [sharedByMeCount, setSharedByMeCount] = useState(0)
@@ -44,6 +45,7 @@ export default function DashboardPage() {
   const [content, setContent] = useState('')
 
   const fullName = [user?.first_name, user?.last_name].filter(Boolean).join(' ')
+  const organizationName = user?.account?.name || 'Your organization'
   const isAccountAdmin = user?.role?.name?.trim().toLowerCase() === 'admin'
   const currentSection = activeSection === 'shared_by_me' && sharedByMeCount === 0 ? 'my' : activeSection
 
@@ -134,44 +136,20 @@ export default function DashboardPage() {
   }
 
   return (
-    <main className="dashboard-shell">
-      <header className="dashboard-header">
-        <a className="dashboard-brand" href="/" aria-label="VoiceDocs home">
-          <span className="brand-mark brand-mark-small">V</span>
-          <span>VoiceDocs</span>
-        </a>
-        <div className="header-actions">
-          <span className="header-user">{fullName || user?.email}</span>
-          <button className="secondary-button" type="button" onClick={logout}>Sign out</button>
-        </div>
-      </header>
+    <main className="dashboard-shell workspace-with-sidebar">
+      <WorkspaceSidebar />
 
       <section className="dashboard-content">
         <div className="workspace-heading">
           <div>
             <p className="eyebrow">YOUR WORKSPACE</p>
             <h1>Good to see you{fullName ? `, ${fullName}` : ''}.</h1>
-            <p className="dashboard-intro">Create, organize and collaborate on your documents.</p>
+            <p className="dashboard-intro">{organizationName} · Create, organize and collaborate on your documents.</p>
           </div>
-          <button className="primary-button create-button" type="button" onClick={() => { setIsCreating(true); setFormError('') }}>
+          <button className="primary-button create-button" type="button" onClick={() => navigate('/documents/new')}>
             <Plus size={17} /> New document
           </button>
         </div>
-
-        <article className="profile-card">
-          <div>
-            <p className="card-label">SIGNED IN AS</p>
-            <h2>{fullName || user?.email}</h2>
-            <p className="muted-text">{user?.email}</p>
-          </div>
-          <div className="profile-details">
-            <div><span>Role</span><strong>{user?.role?.name || '—'}</strong></div>
-            <div><span>Account</span><strong>{user?.account?.name || '—'}</strong></div>
-            <div><span>Email verified</span><strong>{user?.is_email_verified ? 'Yes' : 'No'}</strong></div>
-          </div>
-        </article>
-
-        <GoogleDrivePanel />
 
         {isCreating && (
           <form className="document-form-card" onSubmit={handleCreate}>
