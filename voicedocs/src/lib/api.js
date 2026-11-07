@@ -10,16 +10,21 @@ export const api = axios.create({
   },
 })
 
-// Keep the token in memory for now. A later authentication phase can replace
-// this with the chosen secure persistence/refresh strategy.
-let accessToken = null
+// Persist the access token so a browser refresh does not discard the session.
+const ACCESS_TOKEN_STORAGE_KEY = 'voicedocs_access_token'
+let accessToken = typeof window !== 'undefined' ? window.localStorage.getItem(ACCESS_TOKEN_STORAGE_KEY) : null
 
 export function setAccessToken(token) {
   accessToken = token || null
+  if (typeof window !== 'undefined') {
+    if (accessToken) window.localStorage.setItem(ACCESS_TOKEN_STORAGE_KEY, accessToken)
+    else window.localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY)
+  }
 }
 
 export function clearAccessToken() {
   accessToken = null
+  if (typeof window !== 'undefined') window.localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY)
 }
 
 api.interceptors.request.use((config) => {
