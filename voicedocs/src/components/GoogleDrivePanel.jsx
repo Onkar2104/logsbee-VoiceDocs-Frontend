@@ -24,7 +24,7 @@ export default function GoogleDrivePanel() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     if (params.has('google_drive')) window.history.replaceState({}, '', window.location.pathname)
-    void load()
+    Promise.resolve().then(load)
   }, [load])
 
   async function handleConnect() {
