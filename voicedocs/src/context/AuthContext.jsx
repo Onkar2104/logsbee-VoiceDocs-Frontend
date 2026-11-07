@@ -1,7 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
 import { AuthContext } from './authContext'
-import { clearAccessToken, setAccessToken } from '../lib/api'
-import { loginWithPassword, verifyLoginOtp } from '../lib/logsbeeApi'
+import { loginWithPassword, verifyLoginOtp, setLogsbeeAccessToken, clearLogsbeeAccessToken } from '../lib/logsbeeApi'
 import { fetchCurrentUser } from '../features/current-user/currentUserApi'
 
 export function AuthProvider({ children }) {
@@ -14,14 +13,15 @@ export function AuthProvider({ children }) {
       throw new Error('The authentication service did not return an access token.')
     }
 
-    setAccessToken(tokens.access_token)
+    // The access token is issued by Logsbee User, so attach it to that API client.
+    setLogsbeeAccessToken(tokens.access_token)
     try {
       const currentUser = await fetchCurrentUser()
       setUser(currentUser)
       setIsAuthenticated(true)
       return currentUser
     } catch (error) {
-      clearAccessToken()
+      clearLogsbeeAccessToken()
       setUser(null)
       setIsAuthenticated(false)
       throw error
@@ -57,7 +57,7 @@ export function AuthProvider({ children }) {
   }, [completeAuthentication])
 
   const logout = useCallback(() => {
-    clearAccessToken()
+    clearLogsbeeAccessToken()
     setUser(null)
     setIsAuthenticated(false)
   }, [])
