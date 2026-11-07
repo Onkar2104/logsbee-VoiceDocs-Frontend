@@ -452,3 +452,10 @@
   .audio-library-row { align-items: flex-start; }
   .audio-library-row .recording-actions { flex-wrap: wrap; }
 }
+
+.setting-control-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; }
+.setting-control-row .setting-status { margin-top: 0; }
+.setting-toggle-label { display: inline-flex; align-items: center; gap: 6px; color: #667085; font-size: 11px; font-weight: 700; }
+.setting-toggle-label input { accent-color: #5268e8; }
+.danger-outline-button { display: inline-flex; align-items: center; justify-content: center; min-height: 34px; margin-top: 14px; padding: 0 11px; border: 1px solid #f0c7c3; border-radius: 8px; color: #b42318; background: #fff; font-size: 11px; font-weight: 750; }
+.danger-outline-button:disabled { cursor: not-allowed; opacity: .55; }
