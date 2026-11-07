@@ -116,8 +116,8 @@ export default function DashboardPage() {
         <div className="workspace-heading">
           <div>
             <p className="eyebrow">YOUR WORKSPACE</p>
-            <h1>Good to see you{fullName ? `, ${fullName}` : ''}.</h1>
-            <p className="dashboard-intro">{organizationName} · Create, organize and collaborate on your documents.</p>
+            <h1>Good to see you{fullName ? `, ${fullName}` : ''} at {organizationName}.</h1>
+            <p className="dashboard-intro">Create, organize and collaborate on your documents.</p>
           </div>
           <button className="primary-button create-button" type="button" onClick={() => navigate('/documents/new')}>
             <Plus size={17} /> New document
