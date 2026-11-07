@@ -28,7 +28,9 @@ export default function DocumentPage() {
   const contentTextareaRef = useRef(null)
 
   const isAccountAdmin = user?.role?.name?.trim().toLowerCase() === 'admin'
-  const canManage = Boolean(document && (isAccountAdmin || document.owner_user_id === user?.id))
+  // A newly opened draft belongs to the current user and must be editable
+  // before it has a persisted owner_user_id from the API.
+  const canManage = Boolean(isNewDocument || (document && (isAccountAdmin || document.owner_user_id === user?.id)))
 
   const loadDocument = useCallback(async () => {
     if (isNewDocument) {
@@ -119,7 +121,12 @@ export default function DocumentPage() {
   }
 
   if (isLoading) {
-    return <main className="document-page-shell"><div className="documents-state">Loading document…</div></main>
+    return (
+      <main className="document-page-shell workspace-with-sidebar">
+        <WorkspaceSidebar />
+        <section className="document-page-content"><div className="documents-state">Loading document…</div></section>
+      </main>
+    )
   }
 
   if (error && !document) {
@@ -133,7 +140,16 @@ export default function DocumentPage() {
     )
   }
 
-  if (!document) return null
+  if (!document) {
+    return (
+      <main className="document-page-shell workspace-with-sidebar">
+        <WorkspaceSidebar />
+        <section className="document-page-content">
+          <div className="document-editor-card"><p className="alert alert-error">The document could not be opened. Please return to your documents and try again.</p><Link className="back-link" to="/documents"><ArrowLeft size={16} /> Back to documents</Link></div>
+        </section>
+      </main>
+    )
+  }
 
   return (
     <main className="document-page-shell workspace-with-sidebar">
