@@ -900,3 +900,18 @@
   .audio-library-row { align-items: flex-start; flex-wrap: wrap; }
   .audio-library-row .recording-actions { width: 100%; justify-content: flex-end; }
 }
+
+/* Keep document and audio pagination centered at the bottom of each list. */
+.document-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  width: 100%;
+  margin: 28px auto 8px;
+  text-align: center;
+}
+.document-pagination > span { color: #788397; font-size: 12px; }
+.document-pagination .secondary-button:disabled { cursor: not-allowed; opacity: .5; }
+@media (max-width: 480px) { .document-pagination { gap: 8px; } .document-pagination .secondary-button { padding: 8px 10px; } .document-pagination > span { flex-basis: 100%; order: -1; } }

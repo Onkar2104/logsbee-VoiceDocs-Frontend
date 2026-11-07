@@ -33,6 +33,8 @@ export default function DashboardPage() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const [documents, setDocuments] = useState([])
+  const [page, setPage] = useState(1)
+  const [pagination, setPagination] = useState({ page: 1, total_pages: 1, total_records: 0, has_next: false, has_previous: false })
   const [activeSection, setActiveSection] = useState('my')
   const [sharedByMeCount, setSharedByMeCount] = useState(0)
   const [search, setSearch] = useState('')
@@ -57,14 +59,15 @@ export default function DashboardPage() {
     setIsLoading(true)
     setError('')
     try {
-      const result = await fetchDocuments(currentSection)
-      setDocuments(Array.isArray(result) ? result : [])
+      const result = await fetchDocuments(currentSection, page, 10)
+      setDocuments(Array.isArray(result?.items) ? result.items : Array.isArray(result) ? result : [])
+      setPagination(result?.pagination || { page: 1, total_pages: 1, total_records: Array.isArray(result) ? result.length : 0, has_next: false, has_previous: false })
     } catch (requestError) {
       setError(requestError.response?.data?.detail || 'Could not load your documents. Please try again.')
     } finally {
       setIsLoading(false)
     }
-  }, [currentSection])
+  }, [currentSection, page])
 
   useEffect(() => {
     let cancelled = false
@@ -103,6 +106,8 @@ export default function DashboardPage() {
     try {
       await deleteDocument(documentId)
       setDocuments((current) => current.filter((document) => document.id !== documentId))
+      if (documents.length === 1 && page > 1) setPage((current) => current - 1)
+      else await loadDocuments()
     } catch (requestError) {
       setError(requestError.response?.data?.detail || 'Could not delete the document.')
     }
@@ -135,7 +140,7 @@ export default function DashboardPage() {
             <div className="document-tools">
               <label className="search-field">
                 <Search size={17} />
-                <input aria-label="Search documents" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search documents" />
+                <input aria-label="Search documents" value={search} onChange={(event) => { setSearch(event.target.value); setPage(1) }} placeholder="Search documents" />
               </label>
               <button className="icon-button" type="button" onClick={() => { loadDocuments(); loadSharingSummary() }} aria-label="Refresh documents" title="Refresh">
                 <RefreshCw size={17} />
@@ -149,7 +154,7 @@ export default function DashboardPage() {
               type="button"
               role="tab"
               aria-selected={activeSection === 'my'}
-              onClick={() => setActiveSection('my')}
+              onClick={() => { setActiveSection('my'); setPage(1) }}
             >
               <Files size={18} />
               <span>My Documents</span>
@@ -159,7 +164,7 @@ export default function DashboardPage() {
               type="button"
               role="tab"
               aria-selected={activeSection === 'shared'}
-              onClick={() => setActiveSection('shared')}
+              onClick={() => { setActiveSection('shared'); setPage(1) }}
             >
               <FileText size={18} />
               <span>Shared with Me</span>
@@ -170,7 +175,7 @@ export default function DashboardPage() {
                 type="button"
                 role="tab"
                 aria-selected={activeSection === 'shared_by_me'}
-                onClick={() => setActiveSection('shared_by_me')}
+                onClick={() => { setActiveSection('shared_by_me'); setPage(1) }}
               >
                 <Files size={18} />
                 <span>Shared by Me</span>
@@ -215,6 +220,14 @@ export default function DashboardPage() {
                   )}
                 </article>
               ))}
+            </div>
+          )}
+
+          {!isLoading && pagination.total_pages > 1 && (
+            <div className="document-pagination" aria-label="Document pagination">
+              <button className="secondary-button" type="button" disabled={!pagination.has_previous} onClick={() => setPage((current) => Math.max(1, current - 1))}>Previous</button>
+              <span>Page {pagination.page} of {pagination.total_pages} · {pagination.total_records} documents</span>
+              <button className="secondary-button" type="button" disabled={!pagination.has_next} onClick={() => setPage((current) => current + 1)}>Next</button>
             </div>
           )}
 
