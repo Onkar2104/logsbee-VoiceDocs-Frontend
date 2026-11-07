@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { AudioLines, FileText, HardDrive, House, LogOut, Settings, UserRound } from 'lucide-react'
+import { AudioLines, FileText, HardDrive, House, LogOut, UserRound } from 'lucide-react'
 import { useAuth } from '../context/useAuth'
 
 const links = [
