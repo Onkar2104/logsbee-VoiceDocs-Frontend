@@ -4,8 +4,9 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../context/useAuth'
 import VoiceDictation from '../components/VoiceDictation'
 import RichTextEditor from '../components/RichTextEditor'
+import WorkspaceSidebar from '../components/WorkspaceSidebar'
 import { downloadDocumentPdf, downloadDocumentWord } from '../features/documents/documentExport'
-import { deleteDocument, fetchDocument, requestDocumentEditAccess, updateDocument } from '../features/documents/documentsApi'
+import { createDocument, deleteDocument, fetchDocument, requestDocumentEditAccess, updateDocument } from '../features/documents/documentsApi'
 
 function formatDate(value) {
   if (!value) return 'Not available'
@@ -14,7 +15,8 @@ function formatDate(value) {
 
 export default function DocumentPage() {
   const { documentId } = useParams()
-  const isNewDocument = documentId === 'new'
+  // /documents/new is currently matched by a static route, so documentId can be undefined.
+  const isNewDocument = !documentId || documentId === 'new'
   const navigate = useNavigate()
   const { user } = useAuth()
   const [document, setDocument] = useState(null)

@@ -10,6 +10,24 @@ export const logsbeeApi = axios.create({
   },
 })
 
+// The Logsbee User service owns authentication and the canonical user profile.
+let logsbeeAccessToken = null
+
+export function setLogsbeeAccessToken(token) {
+  logsbeeAccessToken = token || null
+}
+
+export function clearLogsbeeAccessToken() {
+  logsbeeAccessToken = null
+}
+
+logsbeeApi.interceptors.request.use((config) => {
+  if (logsbeeAccessToken) {
+    config.headers.Authorization = `Bearer ${logsbeeAccessToken}`
+  }
+  return config
+})
+
 export async function loginWithPassword({ email, password }) {
   const response = await logsbeeApi.post('/auth/login/password', {
     email,
