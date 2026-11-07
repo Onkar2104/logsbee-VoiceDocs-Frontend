@@ -32,7 +32,14 @@ export default function AudioPage() {
     }
   }, [page])
 
-  useEffect(() => { void load() }, [load])
+  useEffect(() => {
+    let cancelled = false
+    Promise.resolve().then(() => {
+      if (!cancelled) return load()
+      return undefined
+    })
+    return () => { cancelled = true }
+  }, [load])
 
   async function download(item) {
     setBusy(item.id)
