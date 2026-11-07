@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
 import { AuthContext } from './authContext'
+import { clearAccessToken, setAccessToken } from '../lib/api'
 import { loginWithPassword, verifyLoginOtp, setLogsbeeAccessToken, clearLogsbeeAccessToken } from '../lib/logsbeeApi'
 import { fetchCurrentUser } from '../features/current-user/currentUserApi'
 
@@ -14,6 +15,7 @@ export function AuthProvider({ children }) {
     }
 
     // The access token is issued by Logsbee User, so attach it to that API client.
+    setAccessToken(tokens.access_token)
     setLogsbeeAccessToken(tokens.access_token)
     try {
       const currentUser = await fetchCurrentUser()
@@ -21,7 +23,9 @@ export function AuthProvider({ children }) {
       setIsAuthenticated(true)
       return currentUser
     } catch (error) {
-      clearLogsbeeAccessToken()
+      clearAccessToken()
+      clearAccessToken()
+    clearLogsbeeAccessToken()
       setUser(null)
       setIsAuthenticated(false)
       throw error
