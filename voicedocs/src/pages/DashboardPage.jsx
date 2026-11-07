@@ -89,10 +89,6 @@ export default function DashboardPage() {
     return () => { cancelled = true }
   }, [loadSharingSummary])
 
-  useEffect(() => {
-    setPage(1)
-  }, [currentSection, search])
-
   const visibleDocuments = useMemo(() => {
     const query = search.trim().toLowerCase()
     return documents.filter((document) => {
@@ -144,7 +140,7 @@ export default function DashboardPage() {
             <div className="document-tools">
               <label className="search-field">
                 <Search size={17} />
-                <input aria-label="Search documents" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search documents" />
+                <input aria-label="Search documents" value={search} onChange={(event) => { setSearch(event.target.value); setPage(1) }} placeholder="Search documents" />
               </label>
               <button className="icon-button" type="button" onClick={() => { loadDocuments(); loadSharingSummary() }} aria-label="Refresh documents" title="Refresh">
                 <RefreshCw size={17} />
@@ -158,7 +154,7 @@ export default function DashboardPage() {
               type="button"
               role="tab"
               aria-selected={activeSection === 'my'}
-              onClick={() => setActiveSection('my')}
+              onClick={() => { setActiveSection('my'); setPage(1) }}
             >
               <Files size={18} />
               <span>My Documents</span>
@@ -168,7 +164,7 @@ export default function DashboardPage() {
               type="button"
               role="tab"
               aria-selected={activeSection === 'shared'}
-              onClick={() => setActiveSection('shared')}
+              onClick={() => { setActiveSection('shared'); setPage(1) }}
             >
               <FileText size={18} />
               <span>Shared with Me</span>
@@ -179,7 +175,7 @@ export default function DashboardPage() {
                 type="button"
                 role="tab"
                 aria-selected={activeSection === 'shared_by_me'}
-                onClick={() => setActiveSection('shared_by_me')}
+                onClick={() => { setActiveSection('shared_by_me'); setPage(1) }}
               >
                 <Files size={18} />
                 <span>Shared by Me</span>
