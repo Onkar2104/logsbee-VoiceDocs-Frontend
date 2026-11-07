@@ -21,7 +21,20 @@ export default function AudioPage() {
     catch (e) { setError(e.response?.data?.detail || 'Could not load audio. Connect Google Drive to view backed-up recordings.') }
     finally { setLoading(false) }
   }, [])
-  useEffect(() => { void load() }, [load])
+  useEffect(() => {
+    let cancelled = false
+    fetchRecordings()
+      .then((data) => {
+        if (!cancelled) setItems(Array.isArray(data) ? data : [])
+      })
+      .catch((e) => {
+        if (!cancelled) setError(e.response?.data?.detail || 'Could not load audio. Connect Google Drive to view backed-up recordings.')
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => { cancelled = true }
+  }, [])
   async function download(item) {
     setBusy(item.id)
     try {
