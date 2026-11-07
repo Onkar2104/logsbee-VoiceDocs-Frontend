@@ -23,6 +23,7 @@ export function setLogsbeeAccessToken(token) {
 
 export function clearLogsbeeAccessToken() {
   logsbeeAccessToken = null
+  if (typeof window !== 'undefined') window.localStorage.removeItem('voicedocs_access_token')
 }
 
 logsbeeApi.interceptors.request.use((config) => {
