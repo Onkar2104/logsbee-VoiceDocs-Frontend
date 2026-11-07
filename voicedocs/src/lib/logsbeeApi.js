@@ -11,10 +11,14 @@ export const logsbeeApi = axios.create({
 })
 
 // The Logsbee User service owns authentication and the canonical user profile.
-let logsbeeAccessToken = null
+let logsbeeAccessToken = typeof window !== 'undefined' ? window.localStorage.getItem('voicedocs_access_token') : null
 
 export function setLogsbeeAccessToken(token) {
   logsbeeAccessToken = token || null
+  if (typeof window !== 'undefined') {
+    if (logsbeeAccessToken) window.localStorage.setItem('voicedocs_access_token', logsbeeAccessToken)
+    else window.localStorage.removeItem('voicedocs_access_token')
+  }
 }
 
 export function clearLogsbeeAccessToken() {
