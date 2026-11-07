@@ -105,6 +105,8 @@ export default function RegisterPage() {
   }
 
   async function handleResend() {
+    if (isLoading || resendCountdown > 0) return
+    setResendCountdown(60)
     setError('')
     setMessage('')
     setIsLoading(true)
@@ -184,8 +186,10 @@ export default function RegisterPage() {
                   ? 'Verify organization email'
                   : 'Verify Admin email and activate account'}
             </button>
-            <button className="text-button" type="button" onClick={handleResend} disabled={isLoading}>
-              Resend {isAccountEmailStep ? 'organization' : 'Admin'} verification code
+            <button className="text-button" type="button" onClick={handleResend} disabled={isLoading || resendCountdown > 0}>
+              {resendCountdown > 0
+                ? `Resend code available in ${resendCountdown}s`
+                : `Resend ${isAccountEmailStep ? 'organization' : 'Admin'} verification code`}
             </button>
           </form>
         )}
