@@ -9,10 +9,11 @@ function Detail({ label, value }) {
 
 export default function ProfilePage() {
   const { user } = useAuth()
+ 
   const [tab, setTab] = useState('profile')
   const fullName = [user?.first_name, user?.last_name].filter(Boolean).join(' ')
   const account = user?.account || {}
-  const twoFactorEnabled = Boolean(user?.is_2fa_enabled ?? user?.two_factor_enabled)
+  const twoFactorEnabled = Boolean(user?.is_two_factor_authenticated)
   return (
     <main className="workspace-with-sidebar">
       <WorkspaceSidebar />
