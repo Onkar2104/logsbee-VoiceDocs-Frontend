@@ -1,7 +1,12 @@
 import { useCallback, useMemo, useState } from 'react'
 import { AuthContext } from './authContext'
 import { clearAccessToken, setAccessToken } from '../lib/api'
-import { loginWithPassword, verifyLoginOtp } from '../lib/logsbeeApi'
+import {
+  clearLogsbeeAccessToken,
+  loginWithPassword,
+  setLogsbeeAccessToken,
+  verifyLoginOtp,
+} from '../lib/logsbeeApi'
 import { fetchCurrentUser } from '../features/current-user/currentUserApi'
 
 export function AuthProvider({ children }) {
@@ -14,7 +19,11 @@ export function AuthProvider({ children }) {
       throw new Error('The authentication service did not return an access token.')
     }
 
+    // The token is issued by Logsbee User. Keep it available to both the
+    // Logsbee account API and VoiceDocs document API clients.
     setAccessToken(tokens.access_token)
+    setLogsbeeAccessToken(tokens.access_token)
+
     try {
       const currentUser = await fetchCurrentUser()
       setUser(currentUser)
@@ -22,6 +31,7 @@ export function AuthProvider({ children }) {
       return currentUser
     } catch (error) {
       clearAccessToken()
+      clearLogsbeeAccessToken()
       setUser(null)
       setIsAuthenticated(false)
       throw error
@@ -58,6 +68,7 @@ export function AuthProvider({ children }) {
 
   const logout = useCallback(() => {
     clearAccessToken()
+    clearLogsbeeAccessToken()
     setUser(null)
     setIsAuthenticated(false)
   }, [])
