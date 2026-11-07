@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ArrowLeft, Clock3, FileText, Save, Trash2 } from 'lucide-react'
+import { ArrowLeft, Clock3, Download, FileText, Save, Trash2 } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../context/useAuth'
 import VoiceDictation from '../components/VoiceDictation'
 import RichTextEditor from '../components/RichTextEditor'
-import WorkspaceSidebar from '../components/WorkspaceSidebar'
-import { createDocument, deleteDocument, fetchDocument, requestDocumentEditAccess, updateDocument } from '../features/documents/documentsApi'
+import { downloadDocumentPdf, downloadDocumentWord } from '../features/documents/documentExport'
+import { deleteDocument, fetchDocument, requestDocumentEditAccess, updateDocument } from '../features/documents/documentsApi'
 
 function formatDate(value) {
   if (!value) return 'Not available'
@@ -25,6 +25,8 @@ export default function DocumentPage() {
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [isRequestingAccess, setIsRequestingAccess] = useState(false)
+  const [isDownloadMenuOpen, setIsDownloadMenuOpen] = useState(false)
+  const [downloadFormat, setDownloadFormat] = useState('')
   const contentTextareaRef = useRef(null)
 
   const isAccountAdmin = user?.role?.name?.trim().toLowerCase() === 'admin'
@@ -120,6 +122,28 @@ export default function DocumentPage() {
     }
   }
 
+  async function handleDownload(format) {
+    setDownloadFormat(format)
+    setError('')
+    setNotice('')
+    try {
+      const exportTitle = canManage ? title : document.title
+      const exportContent = canManage ? content : document.content
+      if (format === 'pdf') {
+        await downloadDocumentPdf(exportTitle, exportContent)
+      } else {
+        await downloadDocumentWord(exportTitle, exportContent)
+      }
+      setNotice(`Your document was exported as ${format === 'pdf' ? 'PDF' : 'Word'}.`)
+    } catch (downloadError) {
+      console.error('Document export failed:', downloadError)
+      setError('Could not generate the download. Please try again.')
+    } finally {
+      setDownloadFormat('')
+      setIsDownloadMenuOpen(false)
+    }
+  }
+
   if (isLoading) {
     return (
       <main className="document-page-shell workspace-with-sidebar">
@@ -163,11 +187,35 @@ export default function DocumentPage() {
         <div className="document-editor-card">
           <div className="editor-toolbar">
             <span className="document-updated"><Clock3 size={14} /> Last updated {formatDate(document.updated_at)}</span>
-            {canManage && (
-              <button className="icon-button delete-button" type="button" onClick={handleDelete} title="Delete document" aria-label="Delete document">
-                <Trash2 size={17} />
-              </button>
-            )}
+            <div className="document-toolbar-actions">
+              <div className="document-download-wrap">
+                <button
+                  className="secondary-button document-download-button"
+                  type="button"
+                  onClick={() => setIsDownloadMenuOpen((open) => !open)}
+                  aria-expanded={isDownloadMenuOpen}
+                  aria-haspopup="menu"
+                  disabled={Boolean(downloadFormat)}
+                >
+                  <Download size={16} /> {downloadFormat ? 'Preparing…' : 'Download'}
+                </button>
+                {isDownloadMenuOpen && (
+                  <div className="document-download-menu" role="menu" aria-label="Choose download format">
+                    <button type="button" role="menuitem" onClick={() => void handleDownload('pdf')} disabled={Boolean(downloadFormat)}>
+                      <FileText size={16} /> Download as PDF
+                    </button>
+                    <button type="button" role="menuitem" onClick={() => void handleDownload('word')} disabled={Boolean(downloadFormat)}>
+                      <FileText size={16} /> Download as Word (.docx)
+                    </button>
+                  </div>
+                )}
+              </div>
+              {canManage && (
+                <button className="icon-button delete-button" type="button" onClick={handleDelete} title="Delete document" aria-label="Delete document">
+                  <Trash2 size={17} />
+                </button>
+              )}
+            </div>
           </div>
           {error && <p className="alert alert-error" role="alert">{error}</p>}
           {notice && <p className="alert alert-success" role="status">{notice}</p>}
