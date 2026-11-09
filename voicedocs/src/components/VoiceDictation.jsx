@@ -48,7 +48,6 @@ export default function VoiceDictation({ onTranscript, defaultLanguage = 'en', t
   if (defaultLanguage !== previousDefaultLanguage) {
     setPreviousDefaultLanguage(defaultLanguage)
     setLanguage(defaultLanguage || 'en')
-    languageRef.current = defaultLanguage || 'en'
   }
   useEffect(() => { languageRef.current = language }, [language])
   useEffect(() => { modeRef.current = mode }, [mode])
