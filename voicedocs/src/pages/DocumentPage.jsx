@@ -7,6 +7,7 @@ import RichTextEditor from '../components/RichTextEditor'
 import WorkspaceSidebar from '../components/WorkspaceSidebar'
 import { downloadDocumentPdf, downloadDocumentWord } from '../features/documents/documentExport'
 import { createDocument, deleteDocument, fetchDocument, requestDocumentEditAccess, updateDocument } from '../features/documents/documentsApi'
+import { fetchUserPreferences } from '../features/current-user/preferencesApi'
 
 function formatDate(value) {
   if (!value) return 'Not available'
@@ -39,19 +40,21 @@ export default function DocumentPage() {
   const canManage = Boolean(isNewDocument || (document && (isAccountAdmin || document.owner_user_id === user?.id)))
 
   const loadDocument = useCallback(async () => {
-    if (isNewDocument) {
-      setDocument({ id: 'new', title: '', content: '', updated_at: null, owner_user_id: user?.id })
-      setTitle('')
-      setContent('')
-      setIsLoading(false)
-      return
-    }
     setIsLoading(true)
     setError('')
     try {
-      const [result, preferences] = await Promise.all([fetchDocument(documentId), fetchUserPreferences()])
+      const preferences = await fetchUserPreferences()
       setDefaultLanguage(preferences.transcription_language || 'en')
       setTranscriptionProvider(preferences.transcription_provider || 'whisper')
+
+      if (isNewDocument) {
+        setDocument({ id: 'new', title: '', content: '', updated_at: null, owner_user_id: user?.id })
+        setTitle('')
+        setContent('')
+        return
+      }
+
+      const result = await fetchDocument(documentId)
       setDocument(result)
       setTitle(result.title || '')
       setContent(result.content || '')
