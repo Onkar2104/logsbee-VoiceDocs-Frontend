@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { FileText, Plus, Search, RefreshCw, Trash2, Clock3, Files } from 'lucide-react'
+import { FileText, Plus, Search, RefreshCw, Trash2, Clock3, Files, AudioLines } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import GoogleDrivePanel from '../components/GoogleDrivePanel'
 import { useAuth } from '../context/useAuth'
@@ -153,9 +153,12 @@ export default function DashboardPage() {
             <h1>Good to see you{fullName ? `, ${fullName}` : ''}.</h1>
             <p className="dashboard-intro">Create, organize and collaborate on your documents.</p>
           </div>
-          <button className="primary-button create-button" type="button" onClick={() => { setIsCreating(true); setFormError('') }}>
-            <Plus size={17} /> New document
-          </button>
+          <div className="workspace-heading-actions">
+            <Link className="secondary-button" to="/speech-to-text"><AudioLines size={17} /> Speech to text</Link>
+            <button className="primary-button create-button" type="button" onClick={() => { setIsCreating(true); setFormError('') }}>
+              <Plus size={17} /> New document
+            </button>
+          </div>
         </div>
 
         <article className="profile-card">
