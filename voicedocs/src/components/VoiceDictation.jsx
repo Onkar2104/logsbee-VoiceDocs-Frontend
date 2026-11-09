@@ -82,7 +82,7 @@ export default function VoiceDictation({ onTranscript, defaultLanguage = 'en', t
       if (selectedMode === 'live') {
         // Commit the browser transcript to the document independently of the Drive backup.
         // A temporary Google Drive/network failure must not discard recognized words.
-        const transcript = currentTranscript()
+        const transcript = finalTranscriptRef.current.trim()
         setPreview(transcript)
         if (transcript) onTranscript(transcript)
 
