@@ -8,6 +8,7 @@ import RegisterPage from './pages/RegisterPage'
 import ProfilePage from './pages/ProfilePage'
 import DrivePage from './pages/DrivePage'
 import AudioPage from './pages/AudioPage'
+import SettingsPage from './pages/SettingsPage'
 import './App.css'
 
 function App() {
@@ -21,6 +22,7 @@ function App() {
           <Route path="/documents/new" element={<ProtectedRoute><DocumentPage /></ProtectedRoute>} />
           <Route path="/documents/:documentId" element={<ProtectedRoute><DocumentPage /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+          <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
           <Route path="/drive" element={<ProtectedRoute><DrivePage /></ProtectedRoute>} />
           <Route path="/audio" element={<ProtectedRoute><AudioPage /></ProtectedRoute>} />
           <Route
