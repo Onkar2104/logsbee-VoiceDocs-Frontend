@@ -70,7 +70,7 @@ export default function DocumentPage() {
     } finally {
       setIsLoading(false)
     }
-  }, [documentId, isNewDocument, user?.id])
+  }, [documentId, isNewDocument, user])
 
   useEffect(() => {
     let cancelled = false
