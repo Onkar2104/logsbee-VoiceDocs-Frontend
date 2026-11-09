@@ -101,7 +101,7 @@ export default function BrowserSpeechPage() {
             language,
           })
           setDriveSaved(true)
-          setMessage('Recording and transcript saved to Google Drive.')
+          setMessage('Recording saved to Google Drive. The transcript is stored with its VoiceDocs recording.')
         } catch (uploadError) {
           setError(uploadError.response?.data?.detail || 'Could not save the recording. Check your Google Drive connection.')
           setMessage('')
@@ -183,7 +183,7 @@ export default function BrowserSpeechPage() {
         <div className="browser-speech-heading">
           <p className="eyebrow">BROWSER SPEECH RECOGNITION</p>
           <h1>Speak. See your words.</h1>
-          <p>Transcribe speech in your browser while saving the original audio and transcript to your connected Google Drive.</p>
+          <p>Transcribe speech in your browser, back up the original audio to Google Drive, and keep the transcript with its VoiceDocs recording.</p>
         </div>
         <section className="browser-speech-card">
           <div className="browser-speech-controls">
@@ -215,7 +215,7 @@ export default function BrowserSpeechPage() {
           {error && <p className="alert alert-error" role="alert">{error}</p>}
           {message && <p className={'browser-speech-message ' + (driveSaved ? 'is-success' : '')} role="status">{message}</p>}
           {!speechSupported && <p className="browser-speech-note"><MicOff size={15} /> Web Speech API is not available in this browser. Use a recent Chrome or Edge browser.</p>}
-          <p className="browser-speech-note"><Save size={15} /> Stopping uploads the original audio and recognized transcript. Connect Google Drive first from the workspace.</p>
+          <p className="browser-speech-note"><Save size={15} /> Stopping uploads the original audio to Drive and stores the recognized transcript with the recording. Connect Google Drive first from the workspace.</p>
         </section>
       </section>
     </main>
