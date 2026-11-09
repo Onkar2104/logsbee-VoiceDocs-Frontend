@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { AudioLines, FileText, HardDrive, House, LogOut, Settings, UserRound } from 'lucide-react'
+import { AudioLines, FileText, HardDrive, House, LogOut, UserRound } from 'lucide-react'
 import { useAuth } from '../context/useAuth'
 
 const links = [
@@ -7,8 +7,7 @@ const links = [
   { to: '/documents', label: 'Documents', icon: FileText },
   { to: '/audio', label: 'Audio', icon: AudioLines },
   { to: '/drive', label: 'Google Drive', icon: HardDrive },
-  { to: '/profile', label: 'Profile', icon: UserRound },
-  { to: '/settings', label: 'User settings', icon: Settings },
+  { to: '/profile', label: 'Profile & Settings', icon: UserRound },
 ]
 
 export default function WorkspaceSidebar() {
