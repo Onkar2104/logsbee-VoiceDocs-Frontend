@@ -4,7 +4,15 @@ import { transcribeAudio } from '../features/documents/documentsApi'
 import { uploadBrowserRecording } from '../features/recordings/recordingsApi'
 import { SUPPORTED_LANGUAGES } from '../features/current-user/languages'
 
-const SPEECH_LOCALES = { en: 'en-IN', hi: 'hi-IN', mr: 'mr-IN', bn: 'bn-IN', gu: 'gu-IN', kn: 'kn-IN', ml: 'ml-IN', pa: 'pa-IN', ta: 'ta-IN', te: 'te-IN', ur: 'ur-PK' }
+const SPEECH_LOCALES = {
+  en: 'en-IN', hi: 'hi-IN', mr: 'mr-IN', bn: 'bn-IN', gu: 'gu-IN',
+  kn: 'kn-IN', ml: 'ml-IN', pa: 'pa-IN', ta: 'ta-IN', te: 'te-IN',
+  ur: 'ur-PK', as: 'as-IN', or: 'or-IN', ne: 'ne-NP', sa: 'sa-IN',
+  ar: 'ar-SA', fr: 'fr-FR', de: 'de-DE', es: 'es-ES', it: 'it-IT',
+  ja: 'ja-JP', ko: 'ko-KR', pt: 'pt-BR', ru: 'ru-RU', zh: 'zh-CN',
+  tr: 'tr-TR', vi: 'vi-VN', th: 'th-TH', id: 'id-ID', nl: 'nl-NL',
+  pl: 'pl-PL', uk: 'uk-UA', sw: 'sw-KE',
+}
 
 function getErrorMessage(requestError) {
   const detail = requestError?.response?.data?.detail
@@ -52,6 +60,8 @@ export default function VoiceDictation({ onTranscript, defaultLanguage = 'en', t
   async function transcribeBlob(blob, filename) {
     const formData = new FormData()
     formData.append('file', blob, filename)
+    // The backend selects Whisper or IndicConformer from TRANSCRIPTION_PROVIDER in its .env.
+    // Do not send a provider override from the browser.
     const result = await transcribeAudio(formData, languageRef.current)
     setDetectedLanguage(result.language || '')
     setPreview(result.text || '')
@@ -62,21 +72,40 @@ export default function VoiceDictation({ onTranscript, defaultLanguage = 'en', t
     setIsRecording(false)
     stream.getTracks().forEach((track) => track.stop())
     streamRef.current = null
+
     try {
       const blob = new Blob(chunksRef.current, { type: recorder.mimeType || 'audio/webm' })
       if (!blob.size) throw new Error('No audio was captured.')
       const duration = Math.max(0, (Date.now() - startedAtRef.current) / 1000)
       setIsTranscribing(true)
+
       if (selectedMode === 'live') {
-        const transcript = finalTranscriptRef.current.trim()
-        if (!transcript) throw new Error('No speech was recognized. Check your microphone and selected language, then try again.')
+        // Commit the browser transcript to the document independently of the Drive backup.
+        // A temporary Google Drive/network failure must not discard recognized words.
+        const transcript = currentTranscript()
+        setPreview(transcript)
+        if (transcript) onTranscript(transcript)
+
         const formData = new FormData()
         formData.append('file', blob, 'live-dictation.webm')
         formData.append('transcript', transcript)
-        const saved = await uploadBrowserRecording(formData, { duration, language: languageRef.current })
-        if (!saved?.saved) throw new Error('The transcript was captured, but the audio could not be saved to Google Drive. Connect Google Drive and try again.')
-        setPreview(transcript)
-        onTranscript(transcript)
+        try {
+          const saved = await uploadBrowserRecording(formData, {
+            duration,
+            language: languageRef.current,
+          })
+          if (!saved?.saved) {
+            setError(transcript
+              ? 'Transcript inserted, but the original audio was not saved. Connect Google Drive and try again.'
+              : 'No speech was recognized, and the original audio was not saved. Connect Google Drive and try again.')
+          } else if (!transcript) {
+            setError('The original audio was saved to Google Drive, but no speech was recognized. Check your selected language and try again.')
+          }
+        } catch (saveError) {
+          setError(transcript
+            ? `Transcript inserted, but the original audio could not be saved to Google Drive: ${getErrorMessage(saveError)}`
+            : `The original audio could not be saved to Google Drive: ${getErrorMessage(saveError)}`)
+        }
       } else {
         const transcript = await transcribeBlob(blob, 'recording.webm')
         if (transcript) onTranscript(transcript)
@@ -101,6 +130,11 @@ export default function VoiceDictation({ onTranscript, defaultLanguage = 'en', t
     finalTranscriptRef.current = ''
     interimTranscriptRef.current = ''
     stoppingRef.current = false
+
+    if (selectedMode !== 'live' && transcriptionProvider === 'indicconformer' && !['hi', 'mr'].includes(languageRef.current)) {
+      setError('The backend is configured for IndicConformer, which supports Hindi and Marathi only. Change the document language to Hindi or Marathi, or use Live dictation.')
+      return
+    }
 
     if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
       setError('Audio recording is not supported. Use a recent Chrome or Edge browser over HTTPS or localhost.')
@@ -131,14 +165,19 @@ export default function VoiceDictation({ onTranscript, defaultLanguage = 'en', t
           let interim = ''
           for (let index = event.resultIndex; index < event.results.length; index += 1) {
             const phrase = event.results[index][0]?.transcript || ''
-            if (event.results[index].isFinal) finalTranscriptRef.current += (finalTranscriptRef.current ? ' ' : '') + phrase.trim()
-            else interim += phrase
+            if (event.results[index].isFinal) {
+              finalTranscriptRef.current += (finalTranscriptRef.current ? ' ' : '') + phrase.trim()
+            } else {
+              interim += phrase
+            }
           }
           interimTranscriptRef.current = interim
           setPreview(currentTranscript())
         }
         recognition.onerror = (event) => {
-          if (event.error !== 'no-speech' && event.error !== 'aborted') setError(`Live dictation error: ${event.error}. Check microphone permission and try again.`)
+          if (event.error !== 'no-speech' && event.error !== 'aborted') {
+            setError(`Live dictation error: ${event.error}. Check microphone permission and try again.`)
+          }
         }
         recognition.onend = () => {
           if (stoppingRef.current && recorderRef.current?.state === 'recording') recorderRef.current.stop()
@@ -175,6 +214,10 @@ export default function VoiceDictation({ onTranscript, defaultLanguage = 'en', t
       setError('Audio files must be 25 MB or smaller.')
       return
     }
+    if (transcriptionProvider === 'indicconformer' && !['hi', 'mr'].includes(languageRef.current)) {
+      setError('The backend is configured for IndicConformer, which supports Hindi and Marathi only. Change the document language to Hindi or Marathi before uploading audio.')
+      return
+    }
     setError('')
     setPreview('')
     setDetectedLanguage('')
@@ -190,9 +233,7 @@ export default function VoiceDictation({ onTranscript, defaultLanguage = 'en', t
     }
   }
 
-  const languageOptions = transcriptionProvider === 'indicconformer'
-    ? SUPPORTED_LANGUAGES.filter((item) => ['hi', 'mr'].includes(item.value))
-    : SUPPORTED_LANGUAGES
+  const indicLanguageUnsupported = transcriptionProvider === 'indicconformer' && !['hi', 'mr'].includes(language)
 
   return (
     <section className="voice-dictation" aria-label="Voice to text">
@@ -204,21 +245,25 @@ export default function VoiceDictation({ onTranscript, defaultLanguage = 'en', t
         <label className="voice-language-field">
           <span>Document language</span>
           <select value={language} onChange={(event) => setLanguage(event.target.value)} disabled={isRecording || isTranscribing}>
-            {languageOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+            {SUPPORTED_LANGUAGES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
           </select>
         </label>
         {!isRecording ? (
           <div className="voice-start-actions">
             <button type="button" className="voice-action-button" onClick={() => startRecording('live')} disabled={isTranscribing}><Mic size={15} /> Live dictation</button>
-            <button type="button" className="voice-action-button voice-action-secondary" onClick={() => startRecording('record')} disabled={isTranscribing}><AudioLines size={15} /> Record & transcribe</button>
-            <button type="button" className="voice-action-button voice-action-secondary" onClick={() => uploadInputRef.current?.click()} disabled={isTranscribing}><Upload size={15} /> Upload audio</button>
-            <input ref={uploadInputRef} className="voice-file-input" type="file" accept="audio/*,.webm,.wav,.mp3,.m4a,.mp4,.ogg,.aac,.flac" onChange={handleAudioUpload} disabled={isTranscribing} aria-label="Choose an audio file to transcribe" />
+            <button type="button" className="voice-action-button voice-action-secondary" onClick={() => startRecording('record')} disabled={isTranscribing || indicLanguageUnsupported}><AudioLines size={15} /> Record & transcribe</button>
+            <button type="button" className="voice-action-button voice-action-secondary" onClick={() => uploadInputRef.current?.click()} disabled={isTranscribing || indicLanguageUnsupported}><Upload size={15} /> Upload audio</button>
+            <input ref={uploadInputRef} className="voice-file-input" type="file" accept="audio/*,.webm,.wav,.mp3,.m4a,.mp4,.ogg,.aac,.flac" onChange={handleAudioUpload} disabled={isTranscribing || indicLanguageUnsupported} aria-label="Choose an audio file to transcribe" />
           </div>
         ) : (
           <button type="button" className="voice-action-button voice-stop-button" onClick={stopRecording}><Square size={14} /> Stop recording</button>
         )}
       </div>
-      {transcriptionProvider === 'indicconformer' && <p className="voice-provider-note">This server uses IndicConformer. Select Hindi or Marathi for backend transcription and upload.</p>}
+      {transcriptionProvider === 'indicconformer' && (
+        <p className="voice-provider-note">
+          The server uses IndicConformer for Record &amp; transcribe and Upload audio (Hindi and Marathi only). Live dictation uses your browser's speech recognition and follows the selected document language.
+        </p>
+      )}
       {(isRecording || isTranscribing || preview) && (
         <div className="voice-transcript-preview" aria-live="polite">
           <div className="voice-preview-meta">
@@ -226,7 +271,7 @@ export default function VoiceDictation({ onTranscript, defaultLanguage = 'en', t
             {detectedLanguage && <span>Detected: {detectedLanguage.toUpperCase()}</span>}
           </div>
           <p>{preview || (isRecording ? 'Speak clearly. Recognized words will appear here…' : 'Preparing transcript…')}</p>
-          {mode === 'live' && isRecording && <small>Live words appear in this preview. The completed transcript is inserted into your document after you stop. The original audio is saved to Google Drive.</small>}
+          {mode === 'live' && isRecording && <small>Recognized words appear here. When you stop, the transcript is inserted into the document and the original audio is saved to Google Drive.</small>}
         </div>
       )}
       {error && <p className="voice-error" role="alert">{error}</p>}
