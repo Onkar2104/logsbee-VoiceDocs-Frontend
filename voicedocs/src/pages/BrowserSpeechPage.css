@@ -1,0 +1,31 @@
+.browser-speech-shell{min-height:100vh;background:#f7f8fc;color:#172033}
+.browser-speech-header{height:72px;padding:0 clamp(20px,5vw,72px);display:flex;align-items:center;justify-content:space-between;background:#fff;border-bottom:1px solid #e8ebf2}
+.browser-speech-back,.browser-speech-brand{display:inline-flex;align-items:center;gap:10px;color:#344054;text-decoration:none;font-weight:600}
+.browser-speech-brand{color:#172033}
+.browser-speech-content{width:min(900px,calc(100% - 40px));margin:0 auto;padding:64px 0}
+.browser-speech-heading{max-width:680px;margin-bottom:30px}
+.browser-speech-heading h1{font-size:clamp(30px,5vw,42px);letter-spacing:-1.3px;margin:8px 0 12px}
+.browser-speech-heading>p:last-child{color:#667085;line-height:1.65;margin:0}
+.browser-speech-card{background:#fff;border:1px solid #e6e9f0;border-radius:18px;padding:26px;box-shadow:0 12px 35px rgba(25,40,70,.06)}
+.browser-speech-controls{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.browser-speech-controls label{font-weight:600;color:#344054}
+.browser-speech-controls select{min-width:170px;padding:11px 13px;border:1px solid #d0d5dd;border-radius:9px;background:#fff;color:#172033;font:inherit}
+.browser-speech-start,.browser-speech-stop{margin-left:auto;border:0;border-radius:10px;padding:12px 17px;display:inline-flex;align-items:center;gap:9px;color:#fff;font-weight:650;font-size:14px;cursor:pointer}
+.browser-speech-start{background:#2856c7}
+.browser-speech-stop{background:#c43232}
+.browser-speech-start:disabled{opacity:.6;cursor:not-allowed}
+.browser-speech-status{display:flex;align-items:center;gap:9px;margin:24px 0 16px;color:#667085;font-size:14px}
+.browser-speech-status.is-live{color:#16794b}
+.browser-speech-pulse{width:9px;height:9px;border-radius:50%;background:#19a56b;box-shadow:0 0 0 5px #e4f6ed;animation:speech-pulse 1.5s infinite}
+@keyframes speech-pulse{50%{box-shadow:0 0 0 9px rgba(25,165,107,0)}}
+.browser-speech-transcript{min-height:230px;border:1px solid #e6e9f0;border-radius:12px;background:#fbfcff;padding:20px}
+.browser-speech-transcript-heading{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.browser-speech-transcript-heading h2{font-size:16px;margin:0;color:#344054}
+.browser-speech-transcript-heading span{font-size:12px;color:#98a2b3}
+.browser-speech-transcript>p{font-size:16px;line-height:1.8;white-space:pre-wrap;color:#273449;margin:20px 0 0}
+.browser-speech-interim{color:#98a2b3}
+.browser-speech-message{font-size:14px;color:#475467;margin:16px 0 0}
+.browser-speech-message.is-success{color:#16804b}
+.browser-speech-note{display:flex;align-items:flex-start;gap:8px;color:#7a8495;font-size:12px;line-height:1.5;margin:16px 0 0}
+.browser-speech-note svg{flex:0 0 auto;margin-top:1px}
+@media(max-width:600px){.browser-speech-content{padding:38px 0}.browser-speech-card{padding:18px}.browser-speech-controls{align-items:stretch;flex-direction:column}.browser-speech-controls select,.browser-speech-start,.browser-speech-stop{width:100%;margin-left:0;justify-content:center}}
