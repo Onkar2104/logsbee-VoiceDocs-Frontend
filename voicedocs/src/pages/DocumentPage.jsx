@@ -43,9 +43,16 @@ export default function DocumentPage() {
     setIsLoading(true)
     setError('')
     try {
-      const preferences = await fetchUserPreferences()
-      setDefaultLanguage(preferences.transcription_language || 'en')
-      setTranscriptionProvider(preferences.transcription_provider || 'whisper')
+      try {
+        const preferences = await fetchUserPreferences()
+        setDefaultLanguage(preferences.transcription_language || 'en')
+        setTranscriptionProvider(preferences.transcription_provider || 'whisper')
+      } catch (preferencesError) {
+        // A preferences endpoint/migration issue must not prevent document access.
+        console.warn('Could not load speech preferences; using defaults.', preferencesError)
+        setDefaultLanguage('en')
+        setTranscriptionProvider('whisper')
+      }
 
       if (isNewDocument) {
         setDocument({ id: 'new', title: '', content: '', updated_at: null, owner_user_id: user?.id })
