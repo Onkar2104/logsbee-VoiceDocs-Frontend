@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { AudioLines, Mic, Square, Upload } from 'lucide-react'
+import { AudioLines, LoaderCircle, Mic, Square, Upload } from 'lucide-react'
 import { transcribeAudio } from '../features/documents/documentsApi'
 import { uploadBrowserRecording } from '../features/recordings/recordingsApi'
 import { SUPPORTED_LANGUAGES } from '../features/current-user/languages'
@@ -276,8 +276,9 @@ export default function VoiceDictation({ onTranscript, defaultLanguage = 'en', t
             <span>{isRecording ? (mode === 'live' ? 'Listening · live preview' : 'Recording audio') : isTranscribing ? 'Transcribing / saving audio…' : 'Transcript ready'}</span>
             {detectedLanguage && <span>Detected: {detectedLanguage.toUpperCase()}</span>}
           </div>
-          <p>{preview || (isRecording ? 'Speak clearly. Recognized words will appear here…' : 'Preparing transcript…')}</p>
-          {mode === 'live' && isRecording && <small>Recognized words appear here. When you stop, the transcript is inserted into the document and the original audio is saved to Google Drive.</small>}
+          {isTranscribing && <div className="voice-processing-indicator"><LoaderCircle className="spin-icon" size={18} /><span>Processing your audio and generating the transcript. Please wait…</span></div>}
+          <p>{preview || (isRecording ? 'Speak clearly. Your transcript will appear here…' : 'Preparing transcript…')}</p>
+          {mode === 'live' && isRecording && <small>Speak naturally. Whisper will transcribe the complete recording when you stop.</small>}
         </div>
       )}
       {error && <p className="voice-error" role="alert">{error}</p>}

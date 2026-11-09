@@ -1,7 +1,8 @@
-import { api } from '../../lib/api'
+import { logsbeeApi } from '../../lib/logsbeeApi'
 
-// Backend API_V1_PREFIX=/api, and the current-user route is /me.
+// The canonical user profile, including full organization details, belongs
+// to Logsbee User (VITE_LOGSBEE_API_BASE_URL), not the VoiceDocs document API.
 export async function fetchCurrentUser() {
-  const response = await api.get('/me')
+  const response = await logsbeeApi.get('/users/me')
   return response.data
 }

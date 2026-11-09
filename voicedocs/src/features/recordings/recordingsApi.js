@@ -15,8 +15,10 @@ export async function disconnectGoogleDrive() {
   return response.data
 }
 
-export async function fetchRecordings() {
-  const response = await api.get('/recordings')
+export async function fetchRecordings(page = 1, pageSize = 10) {
+  const response = await api.get('/recordings', {
+    params: { page, page_size: pageSize },
+  })
   return response.data
 }
 
