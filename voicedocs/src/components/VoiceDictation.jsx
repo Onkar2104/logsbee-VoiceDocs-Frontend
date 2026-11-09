@@ -23,7 +23,8 @@ function getErrorMessage(requestError) {
 }
 
 export default function VoiceDictation({ onTranscript, defaultLanguage = 'en', transcriptionProvider = 'whisper' }) {
-  const [language, setLanguage] = useState(defaultLanguage)
+  const [language, setLanguage] = useState(defaultLanguage || 'en')
+  const [previousDefaultLanguage, setPreviousDefaultLanguage] = useState(defaultLanguage)
   const [mode, setMode] = useState('live')
   const [isRecording, setIsRecording] = useState(false)
   const [isTranscribing, setIsTranscribing] = useState(false)
@@ -42,7 +43,13 @@ export default function VoiceDictation({ onTranscript, defaultLanguage = 'en', t
   const languageRef = useRef(language)
   const modeRef = useRef(mode)
 
-  useEffect(() => { setLanguage(defaultLanguage || 'en') }, [defaultLanguage])
+  // React's conditional render-time state adjustment keeps a changed account default
+  // in sync without scheduling a cascading update from an effect.
+  if (defaultLanguage !== previousDefaultLanguage) {
+    setPreviousDefaultLanguage(defaultLanguage)
+    setLanguage(defaultLanguage || 'en')
+    languageRef.current = defaultLanguage || 'en'
+  }
   useEffect(() => { languageRef.current = language }, [language])
   useEffect(() => { modeRef.current = mode }, [mode])
 
@@ -244,7 +251,7 @@ export default function VoiceDictation({ onTranscript, defaultLanguage = 'en', t
       <div className="voice-dictation-controls">
         <label className="voice-language-field">
           <span>Document language</span>
-          <select value={language} onChange={(event) => setLanguage(event.target.value)} disabled={isRecording || isTranscribing}>
+          <select value={language} onChange={(event) => { languageRef.current = event.target.value; setLanguage(event.target.value) }} disabled={isRecording || isTranscribing}>
             {SUPPORTED_LANGUAGES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
           </select>
         </label>
