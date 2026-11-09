@@ -81,7 +81,6 @@ export default function VoiceDictation({ onTranscript, defaultLanguage = 'en', t
 
     try {
       const blob = new Blob(chunksRef.current, { type: recorder.mimeType || 'audio/webm' })
-      if (!blob.size) throw new Error('No audio was captured.')
       const duration = Math.max(0, (Date.now() - startedAtRef.current) / 1000)
       setIsTranscribing(true)
 
@@ -92,8 +91,20 @@ export default function VoiceDictation({ onTranscript, defaultLanguage = 'en', t
         setPreview(transcript)
         if (transcript) onTranscript(transcript)
 
+        if (!blob.size) {
+          setError(transcript
+            ? 'Transcript inserted, but the browser did not provide an audio backup.'
+            : 'No speech was recognized and the browser did not provide an audio backup.')
+          return
+        }
+
+        const mimeType = recorder.mimeType || blob.type || 'audio/webm'
+        const extension = mimeType.includes('ogg') ? 'ogg'
+          : mimeType.includes('mp4') ? 'm4a'
+            : mimeType.includes('wav') ? 'wav'
+              : 'webm'
         const formData = new FormData()
-        formData.append('file', blob, 'live-dictation.webm')
+        formData.append('file', blob, `live-dictation.${extension}`)
         formData.append('transcript', transcript)
         try {
           const saved = await uploadBrowserRecording(formData, {
@@ -113,7 +124,13 @@ export default function VoiceDictation({ onTranscript, defaultLanguage = 'en', t
             : `The original audio could not be saved to Google Drive: ${getErrorMessage(saveError)}`)
         }
       } else {
-        const transcript = await transcribeBlob(blob, 'recording.webm')
+        if (!blob.size) throw new Error('No audio was captured.')
+        const mimeType = recorder.mimeType || blob.type || 'audio/webm'
+        const extension = mimeType.includes('ogg') ? 'ogg'
+          : mimeType.includes('mp4') ? 'm4a'
+            : mimeType.includes('wav') ? 'wav'
+              : 'webm'
+        const transcript = await transcribeBlob(blob, `recording.${extension}`)
         if (transcript) onTranscript(transcript)
         else setError('No speech was detected in this recording.')
       }
