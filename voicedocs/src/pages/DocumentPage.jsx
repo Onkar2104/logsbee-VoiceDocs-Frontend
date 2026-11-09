@@ -5,6 +5,7 @@ import { useAuth } from '../context/useAuth'
 import VoiceDictation from '../components/VoiceDictation'
 import RichTextEditor from '../components/RichTextEditor'
 import { deleteDocument, fetchDocument, requestDocumentEditAccess, updateDocument } from '../features/documents/documentsApi'
+import { fetchUserPreferences } from '../features/current-user/preferencesApi'
 
 function formatDate(value) {
   if (!value) return 'Not available'
@@ -19,6 +20,8 @@ export default function DocumentPage() {
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
   const [isLoading, setIsLoading] = useState(true)
+  const [defaultLanguage, setDefaultLanguage] = useState('en')
+  const [transcriptionProvider, setTranscriptionProvider] = useState('whisper')
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
@@ -32,7 +35,9 @@ export default function DocumentPage() {
     setIsLoading(true)
     setError('')
     try {
-      const result = await fetchDocument(documentId)
+      const [result, preferences] = await Promise.all([fetchDocument(documentId), fetchUserPreferences()])
+      setDefaultLanguage(preferences.transcription_language || 'en')
+      setTranscriptionProvider(preferences.transcription_provider || 'whisper')
       setDocument(result)
       setTitle(result.title || '')
       setContent(result.content || '')
@@ -153,7 +158,7 @@ export default function DocumentPage() {
               <label htmlFor="edit-document-title">Document title</label>
               <input id="edit-document-title" value={title} onChange={(event) => setTitle(event.target.value)} maxLength={255} />
               <label htmlFor="edit-document-content">Content</label>
-              <VoiceDictation onTranscript={handleTranscriptInsert} />
+              <VoiceDictation key={documentId} defaultLanguage={defaultLanguage} transcriptionProvider={transcriptionProvider} onTranscript={handleTranscriptInsert} />
               <RichTextEditor editorRef={contentTextareaRef} value={content} onChange={setContent} />
               <div className="editor-actions">
                 <span className="editor-hint">Changes are saved to your VoiceDocs workspace.</span>
