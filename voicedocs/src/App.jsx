@@ -4,6 +4,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 import DashboardPage from './pages/DashboardPage'
 import DocumentPage from './pages/DocumentPage'
 import LoginPage from './pages/LoginPage'
+import BrowserSpeechPage from './pages/BrowserSpeechPage'
 import './App.css'
 
 function App() {
@@ -13,6 +14,7 @@ function App() {
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/documents/:documentId" element={<ProtectedRoute><DocumentPage /></ProtectedRoute>} />
+          <Route path="/speech-to-text" element={<ProtectedRoute><BrowserSpeechPage /></ProtectedRoute>} />
           <Route
             path="/"
             element={
