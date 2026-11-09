@@ -1,7 +1,9 @@
-import { useState } from 'react'
-import { Settings } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Save, Settings } from 'lucide-react'
 import { useAuth } from '../context/useAuth'
 import WorkspaceSidebar from '../components/WorkspaceSidebar'
+import { fetchUserPreferences, updateUserPreferences } from '../features/current-user/preferencesApi'
+import { SUPPORTED_LANGUAGES } from '../features/current-user/languages'
 
 function Detail({ label, value }) {
   return <article className="profile-detail-card"><span>{label}</span><strong>{value || 'Not provided'}</strong></article>
@@ -11,6 +13,40 @@ export default function ProfilePage() {
   const { user } = useAuth()
  
   const [tab, setTab] = useState('profile')
+  const [language, setLanguage] = useState('en')
+  const [isLoadingPreferences, setIsLoadingPreferences] = useState(true)
+  const [isSavingPreferences, setIsSavingPreferences] = useState(false)
+  const [preferencesError, setPreferencesError] = useState('')
+  const [preferencesNotice, setPreferencesNotice] = useState('')
+
+  useEffect(() => {
+    let active = true
+    fetchUserPreferences()
+      .then((preferences) => {
+        if (active) setLanguage(preferences.transcription_language || 'en')
+      })
+      .catch((requestError) => {
+        if (active) setPreferencesError(requestError.response?.data?.detail || 'Could not load your default language.')
+      })
+      .finally(() => { if (active) setIsLoadingPreferences(false) })
+    return () => { active = false }
+  }, [])
+
+  async function handleSaveLanguage(event) {
+    event.preventDefault()
+    setIsSavingPreferences(true)
+    setPreferencesError('')
+    setPreferencesNotice('')
+    try {
+      const updated = await updateUserPreferences({ transcription_language: language })
+      setLanguage(updated.transcription_language || language)
+      setPreferencesNotice('Your default transcription language has been saved.')
+    } catch (requestError) {
+      setPreferencesError(requestError.response?.data?.detail || 'Could not save your default language.')
+    } finally {
+      setIsSavingPreferences(false)
+    }
+  }
   const fullName = [user?.first_name, user?.last_name].filter(Boolean).join(' ')
   const account = user?.account || {}
   const twoFactorEnabled = Boolean(user?.is_two_factor_authenticated)
@@ -18,7 +54,7 @@ export default function ProfilePage() {
     <main className="workspace-with-sidebar">
       <WorkspaceSidebar />
       <section className="workspace-page">
-        <header className="workspace-page-heading"><h1>Profile</h1><p>Manage your personal information, organization details and security preferences.</p></header>
+        <header className="workspace-page-heading"><h1>Profile &amp; Settings</h1><p>Manage your personal information, organization details, language and account preferences.</p></header>
         <div className="profile-tabs" role="tablist" aria-label="Profile sections">
           <button type="button" role="tab" aria-selected={tab === 'profile'} className={`profile-tab ${tab === 'profile' ? 'active' : ''}`} onClick={() => setTab('profile')}>Personal details</button>
           <button type="button" role="tab" aria-selected={tab === 'settings'} className={`profile-tab ${tab === 'settings' ? 'active' : ''}`} onClick={() => setTab('settings')}><Settings size={14} /> Settings</button>
@@ -44,6 +80,22 @@ export default function ProfilePage() {
           </>
         ) : (
           <>
+            <h2 className="profile-section-title">Speech and dictation</h2>
+            <form className="settings-card profile-language-settings" onSubmit={handleSaveLanguage}>
+              <h3>Default transcription language</h3>
+              <p>This language is selected automatically when you open a document. Changing the language inside a document only affects that document session.</p>
+              <label htmlFor="profile-default-transcription-language">Default language</label>
+              <select id="profile-default-transcription-language" value={language} onChange={(event) => setLanguage(event.target.value)} disabled={isLoadingPreferences || isSavingPreferences}>
+                {SUPPORTED_LANGUAGES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+              </select>
+              {preferencesError && <p className="alert alert-error" role="alert">{preferencesError}</p>}
+              {preferencesNotice && <p className="alert alert-success" role="status">{preferencesNotice}</p>}
+              <div className="settings-actions">
+                <button className="primary-button save-button" type="submit" disabled={isLoadingPreferences || isSavingPreferences}>
+                  <Save size={16} /> {isSavingPreferences ? 'Saving…' : 'Save language'}
+                </button>
+              </div>
+            </form>
             <h2 className="profile-section-title">Security & account settings</h2>
             <div className="settings-grid">
               <article className="settings-card"><h3>Two-factor authentication</h3><p>Add an extra verification step when signing in. Your current account status is shown below.</p><div className="setting-control-row"><span className={`setting-status ${twoFactorEnabled ? 'enabled' : ''}`}>{twoFactorEnabled ? 'Enabled' : user?.is_2fa_enabled === false || user?.two_factor_enabled === false ? 'Disabled' : 'Status unavailable'}</span><label className="setting-toggle-label"><input type="checkbox" checked={twoFactorEnabled} disabled aria-label="Two-factor authentication status" /> <span>2FA</span></label></div><p className="setting-helper">The status is read from your account profile. Enable/disable controls require the account security API.</p></article>
