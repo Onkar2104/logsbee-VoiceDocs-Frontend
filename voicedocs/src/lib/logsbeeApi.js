@@ -81,3 +81,20 @@ export async function verifyRegistrationEmail(userId, otp) {
   const response = await logsbeeApi.post(`/users/${userId}/verification/email`, { otp })
   return response.data
 }
+
+
+// Account security is managed by Logsbee User Management, not VoiceDocs.
+export async function requestAccountTwoFactorOtp() {
+  const response = await logsbeeApi.post('/users/me/two-factor/email', {})
+  return response.data
+}
+
+export async function verifyAccountTwoFactorOtp(otp) {
+  const response = await logsbeeApi.post('/users/me/two-factor/email', { otp })
+  return response.data
+}
+
+export async function disableAccountTwoFactor() {
+  const response = await logsbeeApi.delete('/users/me/two-factor')
+  return response.data
+}
