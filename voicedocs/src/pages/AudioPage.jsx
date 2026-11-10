@@ -86,7 +86,7 @@ export default function AudioPage() {
     }
   }
   async function remove(item) {
-    if (!window.confirm(`Delete "${item.file_name}" from Drive?`)) return
+    if (!window.confirm(`Delete "${item.file_name}" from VoiceDocs and Google Drive?`)) return
     setBusy(item.id)
     try {
       await deleteRecording(item.id)
