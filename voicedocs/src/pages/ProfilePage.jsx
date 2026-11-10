@@ -142,29 +142,28 @@ export default function ProfilePage() {
           <>
             <h2 className="profile-section-title">Speech and dictation</h2>
             <form className="settings-card profile-language-settings" onSubmit={handleSaveLanguage}>
-              <h3>Default transcription language</h3>
-              <p>This language is selected automatically when you open a document. Changing the language inside a document only affects that document session.</p>
-              <label htmlFor="profile-default-transcription-language">Default language</label>
+              <div className="speech-settings-intro">
+                <span className="speech-settings-icon"><Settings size={19} /></span>
+                <div><h3>Personalize voice input</h3><p>Choose the language VoiceDocs should select automatically whenever you create or open a document.</p></div>
+              </div>
+              <label htmlFor="profile-default-transcription-language">Your default language</label>
               <select id="profile-default-transcription-language" value={language} onChange={(event) => setLanguage(event.target.value)} disabled={isLoadingPreferences || isSavingPreferences}>
                 {SUPPORTED_LANGUAGES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
               </select>
+              <div className="speech-settings-note"><strong>Good to know</strong><span>You can change the language at any time inside a document. That temporary choice will not overwrite your saved default.</span></div>
+              <div className="speech-backup-option">
+                <div><strong>Automatic Google Drive backup</strong><span>Upload new documents and audio automatically when Drive is connected. Pending files retry when you reconnect or return online.</span></div>
+                <label className="setting-toggle-label"><input type="checkbox" checked={automaticBackup} onChange={(event) => setAutomaticBackup(event.target.checked)} disabled={isLoadingPreferences || isSavingPreferences} aria-label="Enable automatic Google Drive backup" /><span>{automaticBackup ? 'On' : 'Off'}</span></label>
+              </div>
+              {!automaticBackup && <p className="speech-settings-note">Automatic backup is off. Your files remain safely in VoiceDocs until you choose to back them up manually.</p>}
               {preferencesError && <p className="alert alert-error" role="alert">{preferencesError}</p>}
               {preferencesNotice && <p className="alert alert-success" role="status">{preferencesNotice}</p>}
               <div className="settings-actions">
                 <button className="primary-button save-button" type="submit" disabled={isLoadingPreferences || isSavingPreferences}>
-                  <Save size={16} /> {isSavingPreferences ? 'Saving…' : 'Save settings'}
+                  <Save size={16} /> {isSavingPreferences ? 'Saving preferences…' : 'Save preferences'}
                 </button>
               </div>
             </form>
-            <h2 className="profile-section-title">Storage & backup</h2>
-            <article className="settings-card">
-              <h3>Automatic Google Drive backup</h3>
-              <p>When enabled, new documents and audio are uploaded automatically when Drive is connected. Pending files are retried when you reconnect or return online. When disabled, files stay in VoiceDocs until you choose manual backup.</p>
-              <div className="setting-control-row">
-                <span className={`setting-status ${automaticBackup ? 'enabled' : ''}`}>{automaticBackup ? 'Automatic backup on' : 'Manual backup only'}</span>
-                <label className="setting-toggle-label"><input type="checkbox" checked={automaticBackup} onChange={(event) => setAutomaticBackup(event.target.checked)} disabled={isLoadingPreferences || isSavingPreferences} aria-label="Enable automatic Google Drive backup" /> <span>Automatic backup</span></label>
-              </div>
-            </article>
             <h2 className="profile-section-title">Security & account settings</h2>
             <div className="settings-grid">
               <article className="settings-card">
