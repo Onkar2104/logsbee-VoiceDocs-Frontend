@@ -14,6 +14,7 @@ export default function ProfilePage() {
  
   const [tab, setTab] = useState('profile')
   const [language, setLanguage] = useState('en')
+  const [automaticBackup, setAutomaticBackup] = useState(true)
   const [isLoadingPreferences, setIsLoadingPreferences] = useState(true)
   const [isSavingPreferences, setIsSavingPreferences] = useState(false)
   const [preferencesError, setPreferencesError] = useState('')
@@ -23,7 +24,10 @@ export default function ProfilePage() {
     let active = true
     fetchUserPreferences()
       .then((preferences) => {
-        if (active) setLanguage(preferences.transcription_language || 'en')
+        if (active) {
+          setLanguage(preferences.default_language || preferences.transcription_language || 'en')
+          setAutomaticBackup(preferences.automatic_backup_enabled !== false)
+        }
       })
       .catch((requestError) => {
         if (active) setPreferencesError(requestError.response?.data?.detail || 'Could not load your default language.')
@@ -38,9 +42,10 @@ export default function ProfilePage() {
     setPreferencesError('')
     setPreferencesNotice('')
     try {
-      const updated = await updateUserPreferences({ transcription_language: language })
-      setLanguage(updated.transcription_language || language)
-      setPreferencesNotice('Your default transcription language has been saved.')
+      const updated = await updateUserPreferences({ default_language: language, automatic_backup_enabled: automaticBackup })
+      setLanguage(updated.default_language || updated.transcription_language || language)
+      setAutomaticBackup(updated.automatic_backup_enabled !== false)
+      setPreferencesNotice('Your settings have been saved.')
     } catch (requestError) {
       setPreferencesError(requestError.response?.data?.detail || 'Could not save your default language.')
     } finally {
@@ -54,7 +59,7 @@ export default function ProfilePage() {
     <main className="workspace-with-sidebar">
       <WorkspaceSidebar />
       <section className="workspace-page">
-        <header className="workspace-page-heading"><h1>Profile &amp; Settings</h1><p>Manage your personal information, organization details, language and account preferences.</p></header>
+        <header className="workspace-page-heading"><h1>Profile &amp; Settings</h1><p>Manage your personal information, organization details, language, security and backup preferences.</p></header>
         <div className="profile-tabs" role="tablist" aria-label="Profile sections">
           <button type="button" role="tab" aria-selected={tab === 'profile'} className={`profile-tab ${tab === 'profile' ? 'active' : ''}`} onClick={() => setTab('profile')}>Personal details</button>
           <button type="button" role="tab" aria-selected={tab === 'settings'} className={`profile-tab ${tab === 'settings' ? 'active' : ''}`} onClick={() => setTab('settings')}><Settings size={14} /> Settings</button>
@@ -92,10 +97,19 @@ export default function ProfilePage() {
               {preferencesNotice && <p className="alert alert-success" role="status">{preferencesNotice}</p>}
               <div className="settings-actions">
                 <button className="primary-button save-button" type="submit" disabled={isLoadingPreferences || isSavingPreferences}>
-                  <Save size={16} /> {isSavingPreferences ? 'Saving…' : 'Save language'}
+                  <Save size={16} /> {isSavingPreferences ? 'Saving…' : 'Save settings'}
                 </button>
               </div>
             </form>
+            <h2 className="profile-section-title">Storage & backup</h2>
+            <article className="settings-card">
+              <h3>Automatic Google Drive backup</h3>
+              <p>When enabled, new documents and audio are uploaded automatically when Drive is connected. Pending files are retried when you reconnect or return online. When disabled, files stay in VoiceDocs until you choose manual backup.</p>
+              <div className="setting-control-row">
+                <span className={`setting-status ${automaticBackup ? 'enabled' : ''}`}>{automaticBackup ? 'Automatic backup on' : 'Manual backup only'}</span>
+                <label className="setting-toggle-label"><input type="checkbox" checked={automaticBackup} onChange={(event) => setAutomaticBackup(event.target.checked)} disabled={isLoadingPreferences || isSavingPreferences} aria-label="Enable automatic Google Drive backup" /> <span>Automatic backup</span></label>
+              </div>
+            </article>
             <h2 className="profile-section-title">Security & account settings</h2>
             <div className="settings-grid">
               <article className="settings-card"><h3>Two-factor authentication</h3><p>Add an extra verification step when signing in. Your current account status is shown below.</p><div className="setting-control-row"><span className={`setting-status ${twoFactorEnabled ? 'enabled' : ''}`}>{twoFactorEnabled ? 'Enabled' : user?.is_2fa_enabled === false || user?.two_factor_enabled === false ? 'Disabled' : 'Status unavailable'}</span><label className="setting-toggle-label"><input type="checkbox" checked={twoFactorEnabled} disabled aria-label="Two-factor authentication status" /> <span>2FA</span></label></div><p className="setting-helper">The status is read from your account profile. Enable/disable controls require the account security API.</p></article>
@@ -105,7 +119,7 @@ export default function ProfilePage() {
               <article className="settings-card"><h3>Connected applications</h3><p>Manage connected services such as Google Drive.</p><span className="setting-status">Manage in Google Drive</span></article>
               <article className="settings-card settings-danger"><h3>Delete organization account</h3><p>Deleting an organization affects all its members and stored documents. This should require Admin confirmation and a recovery window.</p><span className="setting-status">Deletion API and confirmation flow required</span><button className="danger-outline-button" type="button" disabled title="Organization deletion will be enabled after the secure deletion API is implemented">Delete organization</button></article>
             </div>
-            <p className="settings-warning">For safety, account deletion and 2FA controls are shown as planned settings, not active buttons. They need dedicated backend endpoints and authorization checks before they can safely change account security or delete data.</p>
+            <p className="settings-warning">Two-factor status is synchronized from your Logsbee account. Enable/disable is not exposed here until the authenticated OTP enrollment flow is connected; this prevents the setting from claiming 2FA is active without verification.</p>
           </>
         )}
       </section>
