@@ -116,6 +116,9 @@ export default function AudioPage() {
             <article className="audio-library-row" key={item.id}>
               <span className="recording-file-icon"><AudioLines size={18} /></span>
               <div className="recording-file-details"><strong>{item.file_name}</strong><span>{formatBytes(item.file_size)} · {item.created_at ? new Date(item.created_at).toLocaleString() : 'Date unavailable'}</span></div>
+              <span className={`backup-status ${item.backup_status === 'backed_up' ? 'backup-status-done' : 'backup-status-pending'}`}>
+  {item.backup_status === 'backed_up' ? 'Backed up to Drive' : 'Stored in VoiceDocs'}
+</span>
               <div className="recording-actions">
                 {item.backup_status !== 'backed_up' && (
   <button className="secondary-button" type="button" onClick={() => void backup(item)} disabled={Boolean(busy)}>
