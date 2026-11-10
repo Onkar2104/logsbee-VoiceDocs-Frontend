@@ -3,6 +3,7 @@ import { Save, Settings } from 'lucide-react'
 import { useAuth } from '../context/useAuth'
 import WorkspaceSidebar from '../components/WorkspaceSidebar'
 import { fetchUserPreferences, updateUserPreferences } from '../features/current-user/preferencesApi'
+import { fetchCurrentUser } from '../features/current-user/currentUserApi'
 import { requestAccountTwoFactorOtp, verifyAccountTwoFactorOtp, disableAccountTwoFactor } from '../lib/logsbeeApi'
 import { SUPPORTED_LANGUAGES } from '../features/current-user/languages'
 
@@ -13,6 +14,7 @@ function Detail({ label, value }) {
 export default function ProfilePage() {
   const { user } = useAuth()
  
+  const [accountUser, setAccountUser] = useState(user)
   const [tab, setTab] = useState('profile')
   const [language, setLanguage] = useState('en')
   const [automaticBackup, setAutomaticBackup] = useState(true)
@@ -24,15 +26,28 @@ export default function ProfilePage() {
   const [isSavingPreferences, setIsSavingPreferences] = useState(false)
   const [preferencesError, setPreferencesError] = useState('')
   const [preferencesNotice, setPreferencesNotice] = useState('')
+  const [backupError, setBackupError] = useState('')
+  const [backupNotice, setBackupNotice] = useState('')
+  const [isSavingBackup, setIsSavingBackup] = useState(false)
+  const [securityError, setSecurityError] = useState('')
+  const [securityNotice, setSecurityNotice] = useState('')
+  const [isLoadingAccount, setIsLoadingAccount] = useState(true)
 
   useEffect(() => {
     let active = true
+    fetchCurrentUser()
+      .then((freshUser) => {
+        if (!active) return
+        setAccountUser(freshUser)
+        setTwoFactorEnabled(Boolean(freshUser.is_two_factor_authenticated))
+      })
+      .catch(() => { if (active) setAccountUser(user) })
+      .finally(() => { if (active) setIsLoadingAccount(false) })
     fetchUserPreferences()
       .then((preferences) => {
         if (active) {
           setLanguage(preferences.default_language || preferences.transcription_language || 'en')
           setAutomaticBackup(preferences.automatic_backup_enabled !== false)
-          setTwoFactorEnabled(Boolean(user?.is_two_factor_authenticated))
         }
       })
       .catch((requestError) => {
@@ -40,7 +55,7 @@ export default function ProfilePage() {
       })
       .finally(() => { if (active) setIsLoadingPreferences(false) })
     return () => { active = false }
-  }, [user?.is_two_factor_authenticated])
+  }, [user?.id])
 
   async function handleSaveLanguage(event) {
     event.preventDefault()
@@ -48,10 +63,9 @@ export default function ProfilePage() {
     setPreferencesError('')
     setPreferencesNotice('')
     try {
-      const updated = await updateUserPreferences({ default_language: language, automatic_backup_enabled: automaticBackup })
+      const updated = await updateUserPreferences({ default_language: language })
       setLanguage(updated.default_language || updated.transcription_language || language)
-      setAutomaticBackup(updated.automatic_backup_enabled !== false)
-      setPreferencesNotice('Your settings have been saved.')
+      setPreferencesNotice('Your default language has been saved.')
     } catch (requestError) {
       setPreferencesError(requestError.response?.data?.detail || 'Could not save your default language.')
     } finally {
@@ -59,16 +73,39 @@ export default function ProfilePage() {
     }
   }
 
+
+  async function handleSaveBackup(event) {
+    event.preventDefault()
+    setIsSavingBackup(true)
+    setBackupError('')
+    setBackupNotice('')
+    try {
+      const updated = await updateUserPreferences({ automatic_backup_enabled: automaticBackup })
+      setAutomaticBackup(updated.automatic_backup_enabled !== false)
+      setBackupNotice('Your Google Drive backup preference has been saved.')
+    } catch (requestError) {
+      setBackupError(requestError.response?.data?.detail || 'Could not save your Google Drive backup preference.')
+    } finally {
+      setIsSavingBackup(false)
+    }
+  }
+
+  async function refreshAccountSecurity() {
+    const freshUser = await fetchCurrentUser()
+    setAccountUser(freshUser)
+    setTwoFactorEnabled(Boolean(freshUser.is_two_factor_authenticated))
+  }
+
   async function handleRequestTwoFactorOtp() {
     setTwoFactorBusy(true)
-    setPreferencesError('')
-    setPreferencesNotice('')
+    setSecurityError('')
+    setSecurityNotice('')
     try {
       await requestAccountTwoFactorOtp()
       setTwoFactorStep('verify')
-      setPreferencesNotice('A six-digit verification code has been sent to your registered email.')
+      setSecurityNotice('A six-digit verification code has been sent to your registered email.')
     } catch (requestError) {
-      setPreferencesError(requestError.response?.data?.detail || 'Could not send the verification code.')
+      setSecurityError(requestError.response?.data?.detail || 'Could not send the verification code.')
     } finally {
       setTwoFactorBusy(false)
     }
@@ -77,16 +114,16 @@ export default function ProfilePage() {
   async function handleVerifyTwoFactorOtp(event) {
     event.preventDefault()
     setTwoFactorBusy(true)
-    setPreferencesError('')
-    setPreferencesNotice('')
+    setSecurityError('')
+    setSecurityNotice('')
     try {
       await verifyAccountTwoFactorOtp(twoFactorOtp)
-      setTwoFactorEnabled(true)
+      await refreshAccountSecurity()
       setTwoFactorOtp('')
       setTwoFactorStep('idle')
-      setPreferencesNotice('Two-factor authentication is now enabled.')
+      setSecurityNotice('Two-factor authentication is now enabled.')
     } catch (requestError) {
-      setPreferencesError(requestError.response?.data?.detail || 'Could not verify the code.')
+      setSecurityError(requestError.response?.data?.detail || 'Could not verify the code.')
     } finally {
       setTwoFactorBusy(false)
     }
@@ -94,22 +131,23 @@ export default function ProfilePage() {
 
   async function handleDisableTwoFactor() {
     setTwoFactorBusy(true)
-    setPreferencesError('')
-    setPreferencesNotice('')
+    setSecurityError('')
+    setSecurityNotice('')
     try {
       await disableAccountTwoFactor()
-      setTwoFactorEnabled(false)
+      await refreshAccountSecurity()
       setTwoFactorStep('idle')
-      setPreferencesNotice('Two-factor authentication has been disabled.')
+      setSecurityNotice('Two-factor authentication has been disabled.')
     } catch (requestError) {
-      setPreferencesError(requestError.response?.data?.detail || 'Could not disable two-factor authentication.')
+      setSecurityError(requestError.response?.data?.detail || 'Could not disable two-factor authentication.')
     } finally {
       setTwoFactorBusy(false)
     }
   }
 
-  const fullName = [user?.first_name, user?.last_name].filter(Boolean).join(' ')
-  const account = user?.account || {}
+  const profileUser = accountUser || user
+  const fullName = [profileUser?.first_name, profileUser?.last_name].filter(Boolean).join(' ')
+  const account = profileUser?.account || {}
   return (
     <main className="workspace-with-sidebar">
       <WorkspaceSidebar />
@@ -124,11 +162,11 @@ export default function ProfilePage() {
             <h2 className="profile-section-title">Your details</h2>
             <div className="profile-details-grid">
               <Detail label="Full name" value={fullName} />
-              <Detail label="Email address" value={user?.email} />
-              <Detail label="Contact number" value={user?.contact} />
-              <Detail label="Role" value={user?.role?.name} />
-              <Detail label="Email verification" value={user?.is_email_verified ? 'Verified' : 'Not verified'} />
-              <Detail label="Contact verification" value={user?.is_contact_verified ? 'Verified' : 'Not verified'} />
+              <Detail label="Email address" value={profileUser?.email} />
+              <Detail label="Contact number" value={profileUser?.contact} />
+              <Detail label="Role" value={profileUser?.role?.name} />
+              <Detail label="Email verification" value={profileUser?.is_email_verified ? 'Verified' : 'Not verified'} />
+              <Detail label="Contact verification" value={profileUser?.is_contact_verified ? 'Verified' : 'Not verified'} />
             </div>
             <h2 className="profile-section-title organization-section-title">Organization details</h2>
             <div className="profile-details-grid">
@@ -151,11 +189,6 @@ export default function ProfilePage() {
                 {SUPPORTED_LANGUAGES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
               </select>
               <div className="speech-settings-note"><strong>Good to know</strong><span>You can change the language at any time inside a document. That temporary choice will not overwrite your saved default.</span></div>
-              <div className="speech-backup-option">
-                <div><strong>Automatic Google Drive backup</strong><span>Upload new documents and audio automatically when Drive is connected. Pending files retry when you reconnect or return online.</span></div>
-                <label className="setting-toggle-label"><input type="checkbox" checked={automaticBackup} onChange={(event) => setAutomaticBackup(event.target.checked)} disabled={isLoadingPreferences || isSavingPreferences} aria-label="Enable automatic Google Drive backup" /><span>{automaticBackup ? 'On' : 'Off'}</span></label>
-              </div>
-              {!automaticBackup && <p className="speech-settings-note">Automatic backup is off. Your files remain safely in VoiceDocs until you choose to back them up manually.</p>}
               {preferencesError && <p className="alert alert-error" role="alert">{preferencesError}</p>}
               {preferencesNotice && <p className="alert alert-success" role="status">{preferencesNotice}</p>}
               <div className="settings-actions">
@@ -164,12 +197,24 @@ export default function ProfilePage() {
                 </button>
               </div>
             </form>
+            <h2 className="profile-section-title">Google Drive &amp; backup</h2>
+            <form className="settings-card profile-language-settings" onSubmit={handleSaveBackup}>
+              <div className="speech-settings-intro"><span className="speech-settings-icon"><Settings size={19} /></span><div><h3>Automatic backup</h3><p>Keep your documents and audio backed up to your connected Google Drive.</p></div></div>
+              <div className="speech-backup-option">
+                <div><strong>Automatic Google Drive backup</strong><span>When enabled, pending files retry when you connect Drive, reopen VoiceDocs or return online. When disabled, you can back up each file manually.</span></div>
+                <label className="setting-toggle-label"><input type="checkbox" checked={automaticBackup} onChange={(event) => setAutomaticBackup(event.target.checked)} disabled={isLoadingPreferences || isSavingBackup} aria-label="Enable automatic Google Drive backup" /><span>{automaticBackup ? 'On' : 'Off'}</span></label>
+              </div>
+              {!automaticBackup && <p className="speech-settings-note">Automatic backup is off. Your files remain in VoiceDocs until you choose manual backup.</p>}
+              {backupError && <p className="alert alert-error" role="alert">{backupError}</p>}
+              {backupNotice && <p className="alert alert-success" role="status">{backupNotice}</p>}
+              <div className="settings-actions"><button className="primary-button save-button" type="submit" disabled={isLoadingPreferences || isSavingBackup}><Save size={16} /> {isSavingBackup ? 'Saving backup setting…' : 'Save backup setting'}</button></div>
+            </form>
             <h2 className="profile-section-title">Security & account settings</h2>
             <div className="settings-grid">
               <article className="settings-card">
                 <h3>Two-factor authentication</h3>
                 <p>Require a one-time code sent to your registered Logsbee email address after password sign-in.</p>
-                <div className="setting-control-row"><span className={`setting-status ${twoFactorEnabled ? 'enabled' : ''}`}>{twoFactorEnabled ? 'Enabled' : 'Disabled'}</span></div>
+                <div className="setting-control-row"><span className={`setting-status ${twoFactorEnabled ? 'enabled' : ''}`}>{isLoadingAccount ? 'Checking status…' : twoFactorEnabled ? 'Enabled' : 'Disabled'}</span></div>
                 {twoFactorEnabled ? (
                   <button className="secondary-button" type="button" onClick={handleDisableTwoFactor} disabled={twoFactorBusy}>{twoFactorBusy ? 'Updating…' : 'Disable 2FA'}</button>
                 ) : twoFactorStep === 'verify' ? (
@@ -179,9 +224,9 @@ export default function ProfilePage() {
                     <div className="settings-actions"><button className="primary-button save-button" type="submit" disabled={twoFactorBusy || twoFactorOtp.length !== 6}>{twoFactorBusy ? 'Verifying…' : 'Verify and enable'}</button><button className="secondary-button" type="button" onClick={() => setTwoFactorStep('idle')} disabled={twoFactorBusy}>Cancel</button></div>
                   </form>
                 ) : (
-                  <button className="primary-button" type="button" onClick={handleRequestTwoFactorOtp} disabled={twoFactorBusy || !user?.is_email_verified}>{twoFactorBusy ? 'Sending…' : 'Enable 2FA with email OTP'}</button>
+                  <button className="primary-button" type="button" onClick={handleRequestTwoFactorOtp} disabled={twoFactorBusy || isLoadingAccount || !profileUser?.is_email_verified}>{twoFactorBusy ? 'Sending…' : 'Enable 2FA with email OTP'}</button>
                 )}
-                {!user?.is_email_verified && <p className="settings-warning">Verify your email in Logsbee before enabling 2FA.</p>}
+                {!profileUser?.is_email_verified && <p className="settings-warning">Verify your Logsbee email address before enabling 2FA.</p>}
               </article>
               <article className="settings-card"><h3>Password & recovery</h3><p>Change your password, review recovery options and keep your sign-in details secure.</p><span className="setting-status">Managed by Logsbee User</span></article>
               <article className="settings-card"><h3>Active sessions</h3><p>Review signed-in devices and sign out sessions you no longer use.</p><span className="setting-status">Session management API required</span></article>
