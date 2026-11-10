@@ -110,7 +110,7 @@ export default function AudioPage() {
         </div>
         {error && <p className="alert alert-error" role="alert">{error}</p>}
         {loading ? <div className="documents-state"><LoaderCircle className="spin-icon" /> Loading audio…</div> : items.length === 0 ? (
-          <div className="documents-empty"><span className="empty-icon"><AudioLines size={25} /></span><h3>No audio files yet</h3><p>Connect Google Drive and save a recording to see it here.</p><a className="primary-button audio-connect-link" href="/drive">Open Drive settings</a></div>
+          <div className="documents-empty"><span className="empty-icon"><AudioLines size={25} /></span><h3>No audio files yet</h3><p>Save a recording with a document to see it here.</p><a className="primary-button audio-connect-link" href="/drive">Open Drive settings</a></div>
         ) : (
           <div className="audio-library-list">{items.map((item) => (
             <article className="audio-library-row" key={item.id}>
