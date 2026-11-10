@@ -55,7 +55,7 @@ export default function ProfilePage() {
       })
       .finally(() => { if (active) setIsLoadingPreferences(false) })
     return () => { active = false }
-  }, [user?.id])
+  }, [user])
 
   async function handleSaveLanguage(event) {
     event.preventDefault()
@@ -233,6 +233,8 @@ export default function ProfilePage() {
                     <div className="settings-actions"><button className="primary-button save-button" type="submit" disabled={twoFactorBusy || twoFactorOtp.length !== 6}>{twoFactorBusy ? 'Verifying…' : 'Verify and enable'}</button><button className="secondary-button" type="button" onClick={() => { setTwoFactorStep('idle'); setTwoFactorOtp('') }} disabled={twoFactorBusy}>Cancel</button></div>
                   </form>
                 )}
+                {securityError && <p className="alert alert-error" role="alert">{securityError}</p>}
+                {securityNotice && <p className="alert alert-success" role="status">{securityNotice}</p>}
                 {!profileUser?.is_email_verified && <p className="settings-warning">Verify your Logsbee email address before enabling 2FA.</p>}
               </article>
               <article className="settings-card"><h3>Password & recovery</h3><p>Change your password, review recovery options and keep your sign-in details secure.</p><span className="setting-status">Managed by Logsbee User</span></article>
