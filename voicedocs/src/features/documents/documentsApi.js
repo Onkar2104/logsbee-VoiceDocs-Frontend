@@ -27,6 +27,11 @@ export async function updateDocument(documentId, payload) {
   return response.data
 }
 
+export async function backupDocument(documentId) {
+  const response = await api.post(`/documents/${documentId}/backup`)
+  return response.data
+}
+
 export async function deleteDocument(documentId) {
   const response = await api.delete(`/documents/${documentId}`)
   return response.data
