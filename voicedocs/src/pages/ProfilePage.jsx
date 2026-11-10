@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { Save, Settings } from 'lucide-react'
 import { useAuth } from '../context/useAuth'
 import WorkspaceSidebar from '../components/WorkspaceSidebar'
-import { fetchUserPreferences, updateUserPreferences, requestTwoFactorOtp, verifyTwoFactorOtp, disableTwoFactor } from '../features/current-user/preferencesApi'
+import { fetchUserPreferences, updateUserPreferences } from '../features/current-user/preferencesApi'
+import { requestAccountTwoFactorOtp, verifyAccountTwoFactorOtp, disableAccountTwoFactor } from '../lib/logsbeeApi'
 import { SUPPORTED_LANGUAGES } from '../features/current-user/languages'
 
 function Detail({ label, value }) {
@@ -31,7 +32,7 @@ export default function ProfilePage() {
         if (active) {
           setLanguage(preferences.default_language || preferences.transcription_language || 'en')
           setAutomaticBackup(preferences.automatic_backup_enabled !== false)
-          setTwoFactorEnabled(Boolean(preferences.two_factor_enabled))
+          setTwoFactorEnabled(Boolean(user?.is_two_factor_authenticated))
         }
       })
       .catch((requestError) => {
@@ -39,7 +40,7 @@ export default function ProfilePage() {
       })
       .finally(() => { if (active) setIsLoadingPreferences(false) })
     return () => { active = false }
-  }, [])
+  }, [user?.is_two_factor_authenticated])
 
   async function handleSaveLanguage(event) {
     event.preventDefault()
@@ -63,7 +64,7 @@ export default function ProfilePage() {
     setPreferencesError('')
     setPreferencesNotice('')
     try {
-      await requestTwoFactorOtp()
+      await requestAccountTwoFactorOtp()
       setTwoFactorStep('verify')
       setPreferencesNotice('A six-digit verification code has been sent to your registered email.')
     } catch (requestError) {
@@ -79,7 +80,7 @@ export default function ProfilePage() {
     setPreferencesError('')
     setPreferencesNotice('')
     try {
-      await verifyTwoFactorOtp(twoFactorOtp)
+      await verifyAccountTwoFactorOtp(twoFactorOtp)
       setTwoFactorEnabled(true)
       setTwoFactorOtp('')
       setTwoFactorStep('idle')
@@ -96,7 +97,7 @@ export default function ProfilePage() {
     setPreferencesError('')
     setPreferencesNotice('')
     try {
-      await disableTwoFactor()
+      await disableAccountTwoFactor()
       setTwoFactorEnabled(false)
       setTwoFactorStep('idle')
       setPreferencesNotice('Two-factor authentication has been disabled.')
