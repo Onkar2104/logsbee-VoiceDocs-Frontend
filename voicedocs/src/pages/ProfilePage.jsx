@@ -214,17 +214,24 @@ export default function ProfilePage() {
               <article className="settings-card">
                 <h3>Two-factor authentication</h3>
                 <p>Require a one-time code sent to your registered Logsbee email address after password sign-in.</p>
-                <div className="setting-control-row"><span className={`setting-status ${twoFactorEnabled ? 'enabled' : ''}`}>{isLoadingAccount ? 'Checking status…' : twoFactorEnabled ? 'Enabled' : 'Disabled'}</span></div>
-                {twoFactorEnabled ? (
-                  <button className="secondary-button" type="button" onClick={handleDisableTwoFactor} disabled={twoFactorBusy}>{twoFactorBusy ? 'Updating…' : 'Disable 2FA'}</button>
-                ) : twoFactorStep === 'verify' ? (
-                  <form onSubmit={handleVerifyTwoFactorOtp}>
-                    <label htmlFor="two-factor-otp">Email verification code</label>
+                <div className="setting-control-row two-factor-toggle-row">
+                  <span className={`setting-status ${twoFactorEnabled ? 'enabled' : ''}`}>{isLoadingAccount ? 'Checking status…' : twoFactorEnabled ? 'Enabled' : twoFactorStep === 'verify' ? 'Verification pending' : 'Disabled'}</span>
+                  <label className="two-factor-switch" aria-label="Enable or disable two-factor authentication">
+                    <input
+                      type="checkbox"
+                      checked={twoFactorEnabled}
+                      disabled={twoFactorBusy || isLoadingAccount || (!profileUser?.is_email_verified && !twoFactorEnabled)}
+                      onChange={(event) => event.target.checked ? handleRequestTwoFactorOtp() : handleDisableTwoFactor()}
+                    />
+                    <span className="two-factor-switch-track" />
+                  </label>
+                </div>
+                {twoFactorStep === 'verify' && !twoFactorEnabled && (
+                  <form className="two-factor-verify-form" onSubmit={handleVerifyTwoFactorOtp}>
+                    <label htmlFor="two-factor-otp">Enter the six-digit code sent to your email</label>
                     <input id="two-factor-otp" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} value={twoFactorOtp} onChange={(event) => setTwoFactorOtp(event.target.value.replace(/\D/g, '').slice(0, 6))} required />
-                    <div className="settings-actions"><button className="primary-button save-button" type="submit" disabled={twoFactorBusy || twoFactorOtp.length !== 6}>{twoFactorBusy ? 'Verifying…' : 'Verify and enable'}</button><button className="secondary-button" type="button" onClick={() => setTwoFactorStep('idle')} disabled={twoFactorBusy}>Cancel</button></div>
+                    <div className="settings-actions"><button className="primary-button save-button" type="submit" disabled={twoFactorBusy || twoFactorOtp.length !== 6}>{twoFactorBusy ? 'Verifying…' : 'Verify and enable'}</button><button className="secondary-button" type="button" onClick={() => { setTwoFactorStep('idle'); setTwoFactorOtp('') }} disabled={twoFactorBusy}>Cancel</button></div>
                   </form>
-                ) : (
-                  <button className="primary-button" type="button" onClick={handleRequestTwoFactorOtp} disabled={twoFactorBusy || isLoadingAccount || !profileUser?.is_email_verified}>{twoFactorBusy ? 'Sending…' : 'Enable 2FA with email OTP'}</button>
                 )}
                 {!profileUser?.is_email_verified && <p className="settings-warning">Verify your Logsbee email address before enabling 2FA.</p>}
               </article>
