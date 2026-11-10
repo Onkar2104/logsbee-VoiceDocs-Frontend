@@ -74,7 +74,7 @@ export default function GoogleDrivePanel() {
         <button className="icon-button" type="button" onClick={() => void load()} disabled={loading} aria-label="Refresh Google Drive status" title="Refresh">{loading ? <LoaderCircle className="spin-icon" size={17} /> : <RefreshCw size={17} />}</button>
       </div>
       <div className="drive-connection-row">
-        <div><strong>{status.connected ? 'Google Drive connected' : 'Connect your Google Drive'}</strong><p>{status.connected ? status.google_email : 'Connect your account to back up audio recordings.'}</p></div>
+        <div><strong>{status.connected ? 'Google Drive connected' : 'Connect your Google Drive'}</strong><p>{status.connected ? status.google_email : 'Connect your account to back up documents and audio recordings.'}</p></div>
         {status.connected ? (
           <button className="secondary-button" type="button" onClick={handleDisconnect} disabled={Boolean(busy)}><Unplug size={15} /> {busy === 'disconnect' ? 'Disconnecting…' : 'Disconnect'}</button>
         ) : (
