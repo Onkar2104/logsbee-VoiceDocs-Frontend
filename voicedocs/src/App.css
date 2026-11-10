@@ -1031,3 +1031,66 @@
   .profile-language-settings { padding: 17px; }
   .speech-backup-option { align-items: flex-start; flex-direction: column; }
 }
+
+
+/* Editable two-factor authentication switch */
+.two-factor-toggle-row { justify-content: flex-start; }
+.two-factor-switch {
+  position: relative;
+  display: inline-flex;
+  width: 46px;
+  height: 26px;
+  margin-left: auto;
+  cursor: pointer;
+}
+.two-factor-switch input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+.two-factor-switch-track {
+  position: absolute;
+  inset: 0;
+  border-radius: 20px;
+  background: #d0d5dd;
+  transition: background 160ms ease;
+}
+.two-factor-switch-track::after {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(16,24,40,.2);
+  content: "";
+  transition: transform 160ms ease;
+}
+.two-factor-switch input:checked + .two-factor-switch-track { background: #4056d4; }
+.two-factor-switch input:checked + .two-factor-switch-track::after { transform: translateX(20px); }
+.two-factor-switch input:focus-visible + .two-factor-switch-track { outline: 3px solid rgba(64,86,212,.2); outline-offset: 2px; }
+.two-factor-switch input:disabled + .two-factor-switch-track { cursor: not-allowed; opacity: .55; }
+.two-factor-verify-form {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid #e5e9f2;
+  border-radius: 10px;
+  background: #f9faff;
+}
+.two-factor-verify-form label { color: #475467; font-size: 12px; font-weight: 700; }
+.two-factor-verify-form input {
+  width: 100%;
+  min-height: 43px;
+  padding: 0 12px;
+  border: 1px solid #d9dfeb;
+  border-radius: 8px;
+  background: #fff;
+  color: #263248;
+  font: inherit;
+  font-size: 16px;
+  letter-spacing: .25em;
+}
