@@ -924,3 +924,110 @@
 /* Visible progress feedback while Whisper processes an audio recording/upload. */
 .voice-processing-indicator { display: flex; align-items: center; gap: 10px; margin: 12px 0; padding: 12px 14px; border: 1px solid #dce3ff; border-radius: 9px; color: #4056d4; background: #f4f6ff; font-size: 12px; font-weight: 650; }
 .voice-processing-indicator .spin-icon { flex: 0 0 auto; }
+
+
+/* Speech and dictation preferences */
+.profile-language-settings {
+  display: grid;
+  gap: 16px;
+  max-width: 760px;
+  padding: 24px;
+}
+.speech-settings-intro {
+  display: flex;
+  align-items: flex-start;
+  gap: 13px;
+  padding-bottom: 17px;
+  border-bottom: 1px solid #edf0f5;
+}
+.speech-settings-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 42px;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  color: #4056d4;
+  background: #eef0ff;
+}
+.speech-settings-intro h3 {
+  margin: 1px 0 0;
+  color: #263248;
+  font-size: 16px;
+}
+.speech-settings-intro p {
+  margin: 6px 0 0;
+  max-width: 560px;
+  color: #788397;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.profile-language-settings > label {
+  margin-bottom: -9px;
+  color: #475467;
+  font-size: 12px;
+  font-weight: 700;
+}
+.profile-language-settings > select {
+  width: 100%;
+  min-height: 46px;
+  padding: 0 13px;
+  border: 1px solid #d9dfeb;
+  border-radius: 9px;
+  color: #263248;
+  background: #fff;
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+.profile-language-settings > select:focus {
+  border-color: #697ce4;
+  box-shadow: 0 0 0 3px rgba(64,86,212,.1);
+}
+.speech-settings-note {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 12px 14px;
+  border: 1px solid #e6eaf5;
+  border-radius: 9px;
+  color: #788397;
+  background: #f8f9fc;
+  font-size: 11px;
+  line-height: 1.55;
+}
+.speech-settings-note strong { color: #475467; font-size: 11px; }
+.speech-backup-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 15px;
+  border: 1px solid #e5e9f2;
+  border-radius: 11px;
+  background: #fff;
+}
+.speech-backup-option > div {
+  display: grid;
+  gap: 5px;
+}
+.speech-backup-option strong { color: #344054; font-size: 12px; }
+.speech-backup-option span { color: #788397; font-size: 11px; line-height: 1.5; }
+.speech-backup-option .setting-toggle-label {
+  flex: 0 0 auto;
+  padding: 8px 11px;
+  border-radius: 20px;
+  color: #4056d4;
+  background: #eef0ff;
+  font-weight: 750;
+}
+.profile-language-settings .settings-actions {
+  justify-content: flex-end;
+  margin-top: 0;
+  padding-top: 4px;
+}
+@media (max-width: 520px) {
+  .profile-language-settings { padding: 17px; }
+  .speech-backup-option { align-items: flex-start; flex-direction: column; }
+}
