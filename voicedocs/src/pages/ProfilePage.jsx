@@ -109,7 +109,6 @@ export default function ProfilePage() {
 
   const fullName = [user?.first_name, user?.last_name].filter(Boolean).join(' ')
   const account = user?.account || {}
-  const twoFactorEnabled = Boolean(user?.is_two_factor_authenticated)
   return (
     <main className="workspace-with-sidebar">
       <WorkspaceSidebar />
