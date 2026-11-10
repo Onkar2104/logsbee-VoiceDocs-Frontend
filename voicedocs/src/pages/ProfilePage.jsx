@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Save, Settings } from 'lucide-react'
 import { useAuth } from '../context/useAuth'
 import WorkspaceSidebar from '../components/WorkspaceSidebar'
-import { fetchUserPreferences, updateUserPreferences } from '../features/current-user/preferencesApi'
+import { fetchUserPreferences, updateUserPreferences, requestTwoFactorOtp, verifyTwoFactorOtp, disableTwoFactor } from '../features/current-user/preferencesApi'
 import { SUPPORTED_LANGUAGES } from '../features/current-user/languages'
 
 function Detail({ label, value }) {
@@ -15,6 +15,10 @@ export default function ProfilePage() {
   const [tab, setTab] = useState('profile')
   const [language, setLanguage] = useState('en')
   const [automaticBackup, setAutomaticBackup] = useState(true)
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false)
+  const [twoFactorOtp, setTwoFactorOtp] = useState('')
+  const [twoFactorStep, setTwoFactorStep] = useState('idle')
+  const [twoFactorBusy, setTwoFactorBusy] = useState(false)
   const [isLoadingPreferences, setIsLoadingPreferences] = useState(true)
   const [isSavingPreferences, setIsSavingPreferences] = useState(false)
   const [preferencesError, setPreferencesError] = useState('')
@@ -27,6 +31,7 @@ export default function ProfilePage() {
         if (active) {
           setLanguage(preferences.default_language || preferences.transcription_language || 'en')
           setAutomaticBackup(preferences.automatic_backup_enabled !== false)
+          setTwoFactorEnabled(Boolean(preferences.two_factor_enabled))
         }
       })
       .catch((requestError) => {
@@ -52,6 +57,56 @@ export default function ProfilePage() {
       setIsSavingPreferences(false)
     }
   }
+
+  async function handleRequestTwoFactorOtp() {
+    setTwoFactorBusy(true)
+    setPreferencesError('')
+    setPreferencesNotice('')
+    try {
+      await requestTwoFactorOtp()
+      setTwoFactorStep('verify')
+      setPreferencesNotice('A six-digit verification code has been sent to your registered email.')
+    } catch (requestError) {
+      setPreferencesError(requestError.response?.data?.detail || 'Could not send the verification code.')
+    } finally {
+      setTwoFactorBusy(false)
+    }
+  }
+
+  async function handleVerifyTwoFactorOtp(event) {
+    event.preventDefault()
+    setTwoFactorBusy(true)
+    setPreferencesError('')
+    setPreferencesNotice('')
+    try {
+      await verifyTwoFactorOtp(twoFactorOtp)
+      setTwoFactorEnabled(true)
+      setTwoFactorOtp('')
+      setTwoFactorStep('idle')
+      setPreferencesNotice('Two-factor authentication is now enabled.')
+    } catch (requestError) {
+      setPreferencesError(requestError.response?.data?.detail || 'Could not verify the code.')
+    } finally {
+      setTwoFactorBusy(false)
+    }
+  }
+
+  async function handleDisableTwoFactor() {
+    setTwoFactorBusy(true)
+    setPreferencesError('')
+    setPreferencesNotice('')
+    try {
+      await disableTwoFactor()
+      setTwoFactorEnabled(false)
+      setTwoFactorStep('idle')
+      setPreferencesNotice('Two-factor authentication has been disabled.')
+    } catch (requestError) {
+      setPreferencesError(requestError.response?.data?.detail || 'Could not disable two-factor authentication.')
+    } finally {
+      setTwoFactorBusy(false)
+    }
+  }
+
   const fullName = [user?.first_name, user?.last_name].filter(Boolean).join(' ')
   const account = user?.account || {}
   const twoFactorEnabled = Boolean(user?.is_two_factor_authenticated)
@@ -112,14 +167,30 @@ export default function ProfilePage() {
             </article>
             <h2 className="profile-section-title">Security & account settings</h2>
             <div className="settings-grid">
-              <article className="settings-card"><h3>Two-factor authentication</h3><p>Add an extra verification step when signing in. Your current account status is shown below.</p><div className="setting-control-row"><span className={`setting-status ${twoFactorEnabled ? 'enabled' : ''}`}>{twoFactorEnabled ? 'Enabled' : user?.is_2fa_enabled === false || user?.two_factor_enabled === false ? 'Disabled' : 'Status unavailable'}</span><label className="setting-toggle-label"><input type="checkbox" checked={twoFactorEnabled} disabled aria-label="Two-factor authentication status" /> <span>2FA</span></label></div><p className="setting-helper">The status is read from your account profile. Enable/disable controls require the account security API.</p></article>
+              <article className="settings-card">
+                <h3>Two-factor authentication</h3>
+                <p>Require a one-time code sent to your registered Logsbee email address after password sign-in.</p>
+                <div className="setting-control-row"><span className={`setting-status ${twoFactorEnabled ? 'enabled' : ''}`}>{twoFactorEnabled ? 'Enabled' : 'Disabled'}</span></div>
+                {twoFactorEnabled ? (
+                  <button className="secondary-button" type="button" onClick={handleDisableTwoFactor} disabled={twoFactorBusy}>{twoFactorBusy ? 'Updating…' : 'Disable 2FA'}</button>
+                ) : twoFactorStep === 'verify' ? (
+                  <form onSubmit={handleVerifyTwoFactorOtp}>
+                    <label htmlFor="two-factor-otp">Email verification code</label>
+                    <input id="two-factor-otp" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} value={twoFactorOtp} onChange={(event) => setTwoFactorOtp(event.target.value.replace(/\D/g, '').slice(0, 6))} required />
+                    <div className="settings-actions"><button className="primary-button save-button" type="submit" disabled={twoFactorBusy || twoFactorOtp.length !== 6}>{twoFactorBusy ? 'Verifying…' : 'Verify and enable'}</button><button className="secondary-button" type="button" onClick={() => setTwoFactorStep('idle')} disabled={twoFactorBusy}>Cancel</button></div>
+                  </form>
+                ) : (
+                  <button className="primary-button" type="button" onClick={handleRequestTwoFactorOtp} disabled={twoFactorBusy || !user?.is_email_verified}>{twoFactorBusy ? 'Sending…' : 'Enable 2FA with email OTP'}</button>
+                )}
+                {!user?.is_email_verified && <p className="settings-warning">Verify your email in Logsbee before enabling 2FA.</p>}
+              </article>
               <article className="settings-card"><h3>Password & recovery</h3><p>Change your password, review recovery options and keep your sign-in details secure.</p><span className="setting-status">Managed by Logsbee User</span></article>
               <article className="settings-card"><h3>Active sessions</h3><p>Review signed-in devices and sign out sessions you no longer use.</p><span className="setting-status">Session management API required</span></article>
               <article className="settings-card"><h3>Notifications</h3><p>Future preferences for document shares, edit requests and account security alerts.</p><span className="setting-status">Coming soon</span></article>
               <article className="settings-card"><h3>Connected applications</h3><p>Manage connected services such as Google Drive.</p><span className="setting-status">Manage in Google Drive</span></article>
               <article className="settings-card settings-danger"><h3>Delete organization account</h3><p>Deleting an organization affects all its members and stored documents. This should require Admin confirmation and a recovery window.</p><span className="setting-status">Deletion API and confirmation flow required</span><button className="danger-outline-button" type="button" disabled title="Organization deletion will be enabled after the secure deletion API is implemented">Delete organization</button></article>
             </div>
-            <p className="settings-warning">Two-factor status is synchronized from your Logsbee account. Enable/disable is not exposed here until the authenticated OTP enrollment flow is connected; this prevents the setting from claiming 2FA is active without verification.</p>
+            <p className="settings-warning">2FA activation and deactivation are handled by Logsbee. Activation requires a verified email and a successful one-time code.</p>
           </>
         )}
       </section>
