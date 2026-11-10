@@ -137,7 +137,7 @@ export default function DocumentPage() {
         const audioPending = await savePendingRecordings(updated.id)
         const refreshed = await fetchDocument(updated.id)
         setDocument(refreshed)
-        setContent(refreshed.content || '')
+        setContent(refreshed.content || content)
         setNotice(refreshed.backup_status === 'backed_up' && refreshed.audio_backup_status !== 'not_backed_up' && !audioPending
           ? (isNewDocument ? 'Document and audio saved to Google Drive.' : 'Changes saved to Google Drive.')
           : 'Saved in VoiceDocs database. Google Drive backup is pending; use Back up to Google Drive when available.')
