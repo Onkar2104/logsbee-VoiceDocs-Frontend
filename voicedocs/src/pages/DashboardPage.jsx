@@ -3,7 +3,7 @@ import { FileText, Plus, Search, RefreshCw, Trash2, Clock3, Files } from 'lucide
 import { Link, useNavigate } from 'react-router-dom'
 import WorkspaceSidebar from '../components/WorkspaceSidebar'
 import { useAuth } from '../context/useAuth'
-import { deleteDocument, fetchDocuments, fetchSharingSummary } from '../features/documents/documentsApi'
+import { backupDocument, deleteDocument, fetchDocuments, fetchSharingSummary } from '../features/documents/documentsApi'
 
 function getDocumentPreview(content) {
   if (!content?.trim()) return ''
@@ -40,6 +40,7 @@ export default function DashboardPage() {
   const [search, setSearch] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
+  const [backingUpDocumentId, setBackingUpDocumentId] = useState(null)
 
   const fullName = [user?.first_name, user?.last_name].filter(Boolean).join(' ')
   const organizationName = user?.account?.name || 'Your organization'
@@ -110,6 +111,22 @@ export default function DashboardPage() {
       else await loadDocuments()
     } catch (requestError) {
       setError(requestError.response?.data?.detail || 'Could not delete the document.')
+    }
+  }
+
+  async function handleBackup(documentId) {
+    setBackingUpDocumentId(documentId)
+    setError('')
+    try {
+      const result = await backupDocument(documentId)
+      await loadDocuments()
+      if (result.audio_pending) {
+        setError(`Document backed up, but ${result.audio_pending} audio file(s) still need backup. Try again when Google Drive is available.`)
+      }
+    } catch (requestError) {
+      setError(requestError.response?.data?.detail || 'Backup failed. The document and audio remain stored in VoiceDocs.')
+    } finally {
+      setBackingUpDocumentId(null)
     }
   }
 
@@ -215,6 +232,17 @@ export default function DashboardPage() {
                     <span><Clock3 size={14} /> {formatDate(document.updated_at)}</span>
                     <span>{activeSection === 'my' ? 'Owned by you' : activeSection === 'shared' ? 'Shared with you' : 'Shared by you'}</span>
                   </div>
+                  <p className="document-backup-label">
+                    {document.backup_status === 'backed_up' && document.audio_backup_status !== 'not_backed_up'
+                      ? 'Backed up to Google Drive'
+                      : 'Not backed up · Stored in VoiceDocs'}
+                  </p>
+                  {activeSection === 'my' && (isAccountAdmin || document.owner_user_id === user?.id)
+                    && (document.backup_status !== 'backed_up' || document.audio_backup_status === 'not_backed_up') && (
+                    <button className="secondary-button" type="button" onClick={() => void handleBackup(document.id)} disabled={backingUpDocumentId === document.id}>
+                      {backingUpDocumentId === document.id ? 'Backing up…' : 'Back up to Google Drive'}
+                    </button>
+                  )}
                   {activeSection === 'shared' && (
                     <p className="shared-by-label">Shared with Me by <strong>{document.shared_by_name || 'A teammate'}</strong></p>
                   )}
