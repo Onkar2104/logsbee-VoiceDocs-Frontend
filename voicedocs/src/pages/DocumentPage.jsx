@@ -7,6 +7,7 @@ import RichTextEditor from '../components/RichTextEditor'
 import WorkspaceSidebar from '../components/WorkspaceSidebar'
 import { downloadDocumentPdf, downloadDocumentWord } from '../features/documents/documentExport'
 import { createDocument, deleteDocument, fetchDocument, requestDocumentEditAccess, updateDocument } from '../features/documents/documentsApi'
+import { fetchUserPreferences } from '../features/current-user/preferencesApi'
 
 function formatDate(value) {
   if (!value) return 'Not available'
@@ -23,6 +24,8 @@ export default function DocumentPage() {
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
   const [isLoading, setIsLoading] = useState(true)
+  const [defaultLanguage, setDefaultLanguage] = useState('en')
+  const [transcriptionProvider, setTranscriptionProvider] = useState('whisper')
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
@@ -37,16 +40,27 @@ export default function DocumentPage() {
   const canManage = Boolean(isNewDocument || (document && (isAccountAdmin || document.owner_user_id === user?.id)))
 
   const loadDocument = useCallback(async () => {
-    if (isNewDocument) {
-      setDocument({ id: 'new', title: '', content: '', updated_at: null, owner_user_id: user?.id })
-      setTitle('')
-      setContent('')
-      setIsLoading(false)
-      return
-    }
     setIsLoading(true)
     setError('')
     try {
+      try {
+        const preferences = await fetchUserPreferences()
+        setDefaultLanguage(preferences.transcription_language || 'en')
+        setTranscriptionProvider(preferences.transcription_provider || 'whisper')
+      } catch (preferencesError) {
+        // A preferences endpoint/migration issue must not prevent document access.
+        console.warn('Could not load speech preferences; using defaults.', preferencesError)
+        setDefaultLanguage('en')
+        setTranscriptionProvider('whisper')
+      }
+
+      if (isNewDocument) {
+        setDocument({ id: 'new', title: '', content: '', updated_at: null, owner_user_id: user?.id })
+        setTitle('')
+        setContent('')
+        return
+      }
+
       const result = await fetchDocument(documentId)
       setDocument(result)
       setTitle(result.title || '')
@@ -56,7 +70,7 @@ export default function DocumentPage() {
     } finally {
       setIsLoading(false)
     }
-  }, [documentId, isNewDocument, user?.id])
+  }, [documentId, isNewDocument, user])
 
   useEffect(() => {
     let cancelled = false
@@ -226,7 +240,7 @@ export default function DocumentPage() {
               <label htmlFor="edit-document-title">Document title <span className="required-label">*</span></label>
               <input id="edit-document-title" value={title} onChange={(event) => setTitle(event.target.value)} maxLength={255} required placeholder="Enter a document title" />
               <label htmlFor="edit-document-content">Content</label>
-              <VoiceDictation onTranscript={handleTranscriptInsert} />
+              <VoiceDictation key={documentId} defaultLanguage={defaultLanguage} transcriptionProvider={transcriptionProvider} onTranscript={handleTranscriptInsert} />
               <RichTextEditor editorRef={contentTextareaRef} value={content} onChange={setContent} />
               <div className="editor-actions">
                 <span className="editor-hint">{isNewDocument ? 'A title is required to create this document.' : 'Changes are saved to your VoiceDocs workspace.'}</span>

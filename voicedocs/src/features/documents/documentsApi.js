@@ -41,7 +41,8 @@ export async function transcribeAudio(formData, language = '') {
   const response = await api.post('/transcriptions/', formData, {
     params: language ? { language } : {},
     timeout: 0,
-    headers: { 'Content-Type': 'multipart/form-data' },
+    // Let the browser set the multipart Content-Type including its boundary.
+    headers: { 'Content-Type': undefined },
   })
   return response.data
 }

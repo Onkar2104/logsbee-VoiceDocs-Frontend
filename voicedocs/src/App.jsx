@@ -21,6 +21,7 @@ function App() {
           <Route path="/documents/new" element={<ProtectedRoute><DocumentPage /></ProtectedRoute>} />
           <Route path="/documents/:documentId" element={<ProtectedRoute><DocumentPage /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+          <Route path="/settings" element={<Navigate to="/profile" replace />} />
           <Route path="/drive" element={<ProtectedRoute><DrivePage /></ProtectedRoute>} />
           <Route path="/audio" element={<ProtectedRoute><AudioPage /></ProtectedRoute>} />
           <Route

@@ -34,3 +34,16 @@ export async function deleteRecording(recordingId) {
   const response = await api.delete(`/recordings/${recordingId}`)
   return response.data
 }
+
+export async function uploadBrowserRecording(formData, options = {}) {
+  const params = {}
+  if (options.duration != null) params.duration = options.duration
+  if (options.language) params.language = options.language
+  const response = await api.post('/recordings/upload', formData, {
+    params,
+    timeout: 0,
+    // Let the browser add the multipart boundary; the shared API client defaults to JSON.
+    headers: { 'Content-Type': undefined },
+  })
+  return response.data
+}
