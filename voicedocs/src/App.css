@@ -86,6 +86,12 @@
 .document-preview { display: -webkit-box; overflow: hidden; min-height: 38px; margin: 0; color: #8a94a6; font-size: 11px; line-height: 1.6; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; }
 .document-card-footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: auto; padding-top: 17px; color: #98a1b2; font-size: 10px; }
 .document-card-footer span { display: inline-flex; align-items: center; gap: 5px; }
+.document-backup-label { margin: 10px 0 0; color: #7b8496; font-size: 10px; font-weight: 650; }
+.backup-status { display: inline-flex; align-items: center; padding: 5px 9px; border-radius: 999px; font-size: 10px; font-weight: 700; }
+.backup-status-done { color: #147a52; background: #eaf8f1; }
+.backup-status-pending { color: #9a5b10; background: #fff4df; }
+.editor-toolbar { flex-wrap: wrap; gap: 10px; }
+.document-toolbar-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .document-form-card { margin-top: 20px; }
 .section-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
 .section-heading .card-label { margin-bottom: 7px; }
