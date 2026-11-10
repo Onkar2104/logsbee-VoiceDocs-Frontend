@@ -98,20 +98,23 @@ export default function DocumentPage() {
   }
 
   async function savePendingRecordings(savedDocumentId) {
-    if (!pendingRecordings.length) return
+    if (!pendingRecordings.length) return false
+    let backupPending = false
     for (const recording of pendingRecordings) {
       const formData = new FormData()
       formData.append('file', recording.blob, recording.filename)
       formData.append('transcript', recording.transcript || '')
-      await uploadBrowserRecording(formData, {
+      const uploadResult = await uploadBrowserRecording(formData, {
         duration: recording.duration,
         language: recording.language,
         documentId: savedDocumentId,
       })
+      if (uploadResult.backup_status !== 'backed_up') backupPending = true
       // Remove each successful upload immediately so retrying after a later
       // failure does not create duplicate Drive recordings.
       setPendingRecordings((current) => current.filter((item) => item !== recording))
     }
+    return backupPending
   }
 
   async function handleSave(event) {
@@ -131,10 +134,15 @@ export default function DocumentPage() {
       setTitle(updated.title)
       setContent(updated.content)
       try {
-        await savePendingRecordings(updated.id)
-        setNotice(isNewDocument ? 'Your document has been created and its audio was saved to Google Drive.' : 'Your changes and pending audio have been saved.')
+        const audioPending = await savePendingRecordings(updated.id)
+        const refreshed = await fetchDocument(updated.id)
+        setDocument(refreshed)
+        setContent(refreshed.content || '')
+        setNotice(refreshed.backup_status === 'backed_up' && refreshed.audio_backup_status !== 'not_backed_up' && !audioPending
+          ? (isNewDocument ? 'Document and audio saved to Google Drive.' : 'Changes saved to Google Drive.')
+          : 'Saved in VoiceDocs database. Google Drive backup is pending; use Back up to Google Drive when available.')
       } catch (audioError) {
-        setError(audioError.response?.data?.detail || audioError.message || 'The document was saved, but its audio could not be uploaded to Google Drive. Save again to retry.')
+        setError(audioError.response?.data?.detail || audioError.message || 'The document was saved, but audio upload failed. Your pending audio can be backed up later.')
       }
       if (isNewDocument) navigate(`/documents/${updated.id}`, { replace: true })
     } catch (requestError) {
