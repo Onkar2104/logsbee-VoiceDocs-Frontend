@@ -22,6 +22,11 @@ export async function fetchRecordings(page = 1, pageSize = 10) {
   return response.data
 }
 
+export async function backupRecording(recordingId) {
+  const response = await api.post(`/recordings/${recordingId}/backup`)
+  return response.data
+}
+
 export async function fetchRecordingContent(recordingId) {
   const response = await api.get(`/recordings/${recordingId}/content`, {
     responseType: 'blob',
