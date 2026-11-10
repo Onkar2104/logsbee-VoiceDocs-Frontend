@@ -53,3 +53,9 @@ export async function uploadBrowserRecording(formData, options = {}) {
   })
   return response.data
 }
+
+
+export async function backupPendingFiles() {
+  const response = await api.post('/google-drive/backup-pending', {}, { timeout: 0 })
+  return response.data
+}
