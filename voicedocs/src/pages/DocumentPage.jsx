@@ -8,6 +8,7 @@ import WorkspaceSidebar from '../components/WorkspaceSidebar'
 import { downloadDocumentPdf, downloadDocumentWord } from '../features/documents/documentExport'
 import { createDocument, deleteDocument, fetchDocument, requestDocumentEditAccess, updateDocument } from '../features/documents/documentsApi'
 import { fetchUserPreferences } from '../features/current-user/preferencesApi'
+import { uploadBrowserRecording } from '../features/recordings/recordingsApi'
 
 function formatDate(value) {
   if (!value) return 'Not available'
@@ -32,6 +33,7 @@ export default function DocumentPage() {
   const [isRequestingAccess, setIsRequestingAccess] = useState(false)
   const [isDownloadMenuOpen, setIsDownloadMenuOpen] = useState(false)
   const [downloadFormat, setDownloadFormat] = useState('')
+  const [pendingRecordings, setPendingRecordings] = useState([])
   const contentTextareaRef = useRef(null)
 
   const isAccountAdmin = user?.role?.name?.trim().toLowerCase() === 'admin'
@@ -82,11 +84,30 @@ export default function DocumentPage() {
     return () => { cancelled = true }
   }, [loadDocument])
 
-  function handleTranscriptInsert(transcript) {
+  function handleTranscriptInsert(transcript, recording = null) {
     const editor = contentTextareaRef.current
     if (!editor) return
     editor.chain().focus().insertContent(transcript.trim()).run()
-    setNotice('Transcription inserted. Save your document to keep the changes.')
+    if (recording?.blob?.size) {
+      setPendingRecordings((current) => [...current, recording])
+      setNotice('Transcription inserted. Audio will be saved to Google Drive when you create or save this document.')
+    } else {
+      setNotice('Transcription inserted. Save your document to keep the changes.')
+    }
+  }
+
+  async function savePendingRecordings() {
+    if (!pendingRecordings.length) return
+    for (const recording of pendingRecordings) {
+      const formData = new FormData()
+      formData.append('file', recording.blob, recording.filename)
+      formData.append('transcript', recording.transcript || '')
+      await uploadBrowserRecording(formData, {
+        duration: recording.duration,
+        language: recording.language,
+      })
+    }
+    setPendingRecordings([])
   }
 
   async function handleSave(event) {
@@ -105,7 +126,12 @@ export default function DocumentPage() {
       setDocument(updated)
       setTitle(updated.title)
       setContent(updated.content)
-      setNotice(isNewDocument ? 'Your document has been created.' : 'Your changes have been saved.')
+      try {
+        await savePendingRecordings()
+        setNotice(isNewDocument ? 'Your document has been created and its audio was saved to Google Drive.' : 'Your changes and pending audio have been saved.')
+      } catch (audioError) {
+        setError(audioError.response?.data?.detail || audioError.message || 'The document was saved, but its audio could not be uploaded to Google Drive. Save again to retry.')
+      }
       if (isNewDocument) navigate(`/documents/${updated.id}`, { replace: true })
     } catch (requestError) {
       setError(requestError.response?.data?.detail || 'Could not save your changes.')
