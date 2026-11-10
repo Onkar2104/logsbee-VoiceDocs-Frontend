@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { AudioLines, LoaderCircle, Mic, Square, Upload } from 'lucide-react'
 import { transcribeAudio } from '../features/documents/documentsApi'
-import { uploadBrowserRecording } from '../features/recordings/recordingsApi'
 import { SUPPORTED_LANGUAGES } from '../features/current-user/languages'
 
 const SPEECH_LOCALES = {
@@ -85,43 +84,26 @@ export default function VoiceDictation({ onTranscript, defaultLanguage = 'en', t
       setIsTranscribing(true)
 
       if (selectedMode === 'live') {
-        // Commit the browser transcript to the document independently of the Drive backup.
-        // A temporary Google Drive/network failure must not discard recognized words.
+        // Keep the original recording in browser memory. The document page uploads it
+        // to Drive only after the user explicitly saves or creates the document.
         const transcript = finalTranscriptRef.current.trim()
         setPreview(transcript)
-        if (transcript) onTranscript(transcript)
-
-        if (!blob.size) {
-          setError(transcript
-            ? 'Transcript inserted, but the browser did not provide an audio backup.'
-            : 'No speech was recognized and the browser did not provide an audio backup.')
-          return
-        }
-
-        const mimeType = recorder.mimeType || blob.type || 'audio/webm'
-        const extension = mimeType.includes('ogg') ? 'ogg'
-          : mimeType.includes('mp4') ? 'm4a'
-            : mimeType.includes('wav') ? 'wav'
-              : 'webm'
-        const formData = new FormData()
-        formData.append('file', blob, `live-dictation.${extension}`)
-        formData.append('transcript', transcript)
-        try {
-          const saved = await uploadBrowserRecording(formData, {
+        if (transcript) {
+          const mimeType = recorder.mimeType || blob.type || 'audio/webm'
+          const extension = mimeType.includes('ogg') ? 'ogg'
+            : mimeType.includes('mp4') ? 'm4a'
+              : mimeType.includes('wav') ? 'wav'
+                : 'webm'
+          onTranscript(transcript, blob.size ? {
+            blob,
+            filename: `live-dictation.${extension}`,
+            mimeType,
             duration,
             language: languageRef.current,
-          })
-          if (!saved?.saved) {
-            setError(transcript
-              ? 'Transcript inserted, but the original audio was not saved. Connect Google Drive and try again.'
-              : 'No speech was recognized, and the original audio was not saved. Connect Google Drive and try again.')
-          } else if (!transcript) {
-            setError('The original audio was saved to Google Drive, but no speech was recognized. Check your selected language and try again.')
-          }
-        } catch (saveError) {
-          setError(transcript
-            ? `Transcript inserted, but the original audio could not be saved to Google Drive: ${getErrorMessage(saveError)}`
-            : `The original audio could not be saved to Google Drive: ${getErrorMessage(saveError)}`)
+            transcript,
+          } : null)
+        } else {
+          setError('No speech was recognized. No audio will be saved unless you create a document.')
         }
       } else {
         if (!blob.size) throw new Error('No audio was captured.')
@@ -131,7 +113,14 @@ export default function VoiceDictation({ onTranscript, defaultLanguage = 'en', t
             : mimeType.includes('wav') ? 'wav'
               : 'webm'
         const transcript = await transcribeBlob(blob, `recording.${extension}`)
-        if (transcript) onTranscript(transcript)
+        if (transcript) onTranscript(transcript, {
+          blob,
+          filename: `recording.${extension}`,
+          mimeType,
+          duration,
+          language: languageRef.current,
+          transcript,
+        })
         else setError('No speech was detected in this recording.')
       }
     } catch (requestError) {
@@ -247,7 +236,14 @@ export default function VoiceDictation({ onTranscript, defaultLanguage = 'en', t
     setIsTranscribing(true)
     try {
       const transcript = await transcribeBlob(file, file.name)
-      if (transcript) onTranscript(transcript)
+      if (transcript) onTranscript(transcript, {
+        blob: file,
+        filename: file.name,
+        mimeType: file.type || 'application/octet-stream',
+        duration: null,
+        language: languageRef.current,
+        transcript,
+      })
       else setError('No speech was detected in this audio file.')
     } catch (requestError) {
       setError(getErrorMessage(requestError))
@@ -295,7 +291,7 @@ export default function VoiceDictation({ onTranscript, defaultLanguage = 'en', t
           </div>
           {isTranscribing && <div className="voice-processing-indicator"><LoaderCircle className="spin-icon" size={18} /><span>Processing your audio and generating the transcript. Please wait…</span></div>}
           <p>{preview || (isRecording ? 'Speak clearly. Your transcript will appear here…' : 'Preparing transcript…')}</p>
-          {mode === 'live' && isRecording && <small>Speak naturally. Whisper will transcribe the complete recording when you stop.</small>}
+          {mode === 'live' && isRecording && <small>Speak naturally. Your transcript and audio stay in this draft until you save the document.</small>}
         </div>
       )}
       {error && <p className="voice-error" role="alert">{error}</p>}
