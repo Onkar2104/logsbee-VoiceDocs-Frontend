@@ -55,7 +55,15 @@ export async function uploadBrowserRecording(formData, options = {}) {
 }
 
 
+let pendingBackupPromise = null
+
 export async function backupPendingFiles() {
-  const response = await api.post('/google-drive/backup-pending', {}, { timeout: 0 })
-  return response.data
+  if (pendingBackupPromise) return pendingBackupPromise
+  pendingBackupPromise = api.post('/google-drive/backup-pending', {}, { timeout: 0 })
+    .then((response) => {
+      window.dispatchEvent(new CustomEvent('voicedocs:backup-result', { detail: response.data }))
+      return response.data
+    })
+    .finally(() => { pendingBackupPromise = null })
+  return pendingBackupPromise
 }
