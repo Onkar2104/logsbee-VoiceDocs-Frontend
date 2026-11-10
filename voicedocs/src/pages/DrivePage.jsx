@@ -20,9 +20,9 @@ export default function DrivePage() {
           <article className="drive-library-card">
             <span><FileText size={20} /></span>
             <h2>Documents</h2>
-            <p>Open and manage your VoiceDocs documents. Google Drive document backup is not enabled yet; documents currently use VoiceDocs storage.</p>
+            <p>Open and manage your VoiceDocs documents. Documents are stored as Word files in Google Drive when automatic backup is enabled.</p>
             <Link to="/documents">Open documents</Link>
-            <span className="drive-coming-soon"><ShieldCheck size={14}/> Drive document backup planned</span>
+            <span className="drive-coming-soon"><ShieldCheck size={14}/> DOCX backup supported</span>
           </article>
         </div>
 

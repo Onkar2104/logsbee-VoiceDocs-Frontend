@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { AudioLines, Download, ExternalLink, LoaderCircle, RefreshCw, Trash2 } from 'lucide-react'
 import WorkspaceSidebar from '../components/WorkspaceSidebar'
-import { deleteRecording, fetchRecordingContent, fetchRecordings } from '../features/recordings/recordingsApi'
+import { backupRecording, deleteRecording, fetchRecordingContent, fetchRecordings } from '../features/recordings/recordingsApi'
 
 function formatBytes(value) {
   if (!value) return '0 B'
@@ -26,7 +26,7 @@ export default function AudioPage() {
       setItems(Array.isArray(result?.items) ? result.items : [])
       setPagination(result?.pagination || { page: 1, page_size: 10, total_records: 0, total_pages: 0, has_next: false, has_previous: false })
     } catch (requestError) {
-      setError(requestError.response?.data?.detail || 'Could not load audio. Connect Google Drive to view backed-up recordings.')
+      setError(requestError.response?.data?.detail || 'Could not load audio. Your saved recordings will appear here.')
     } finally {
       setLoading(false)
     }
@@ -73,8 +73,20 @@ export default function AudioPage() {
     }
   }
 
+  async function backup(item) {
+    setBusy(item.id)
+    setError('')
+    try {
+      await backupRecording(item.id)
+      await load()
+    } catch (requestError) {
+      setError(requestError.response?.data?.detail || 'Could not back up this recording. It remains stored in VoiceDocs.')
+    } finally {
+      setBusy('')
+    }
+  }
   async function remove(item) {
-    if (!window.confirm(`Delete "${item.file_name}" from Drive?`)) return
+    if (!window.confirm(`Delete "${item.file_name}" from VoiceDocs and Google Drive?`)) return
     setBusy(item.id)
     try {
       await deleteRecording(item.id)
@@ -91,21 +103,29 @@ export default function AudioPage() {
     <main className="workspace-with-sidebar">
       <WorkspaceSidebar />
       <section className="workspace-page">
-        <header className="workspace-page-heading"><h1>Audio library</h1><p>Your recordings stored in connected Google Drive.</p></header>
+        <header className="workspace-page-heading"><h1>Audio library</h1><p>Your recordings stored in VoiceDocs or backed up to Google Drive.</p></header>
         <div className="audio-library-toolbar">
           <span>{pagination.total_records} recordings</span>
           <button className="icon-button" type="button" onClick={() => void load()} disabled={loading} aria-label="Refresh audio"><RefreshCw size={17} /></button>
         </div>
         {error && <p className="alert alert-error" role="alert">{error}</p>}
         {loading ? <div className="documents-state"><LoaderCircle className="spin-icon" /> Loading audio…</div> : items.length === 0 ? (
-          <div className="documents-empty"><span className="empty-icon"><AudioLines size={25} /></span><h3>No audio files yet</h3><p>Connect Google Drive and save a recording to see it here.</p><a className="primary-button audio-connect-link" href="/drive">Open Drive settings</a></div>
+          <div className="documents-empty"><span className="empty-icon"><AudioLines size={25} /></span><h3>No audio files yet</h3><p>Save a recording with a document to see it here.</p><a className="primary-button audio-connect-link" href="/drive">Open Drive settings</a></div>
         ) : (
           <div className="audio-library-list">{items.map((item) => (
             <article className="audio-library-row" key={item.id}>
               <span className="recording-file-icon"><AudioLines size={18} /></span>
               <div className="recording-file-details"><strong>{item.file_name}</strong><span>{formatBytes(item.file_size)} · {item.created_at ? new Date(item.created_at).toLocaleString() : 'Date unavailable'}</span></div>
+              <span className={`backup-status ${item.backup_status === 'backed_up' ? 'backup-status-done' : 'backup-status-pending'}`}>
+  {item.backup_status === 'backed_up' ? 'Backed up to Drive' : 'Stored in VoiceDocs'}
+</span>
               <div className="recording-actions">
-                <button className="icon-button" type="button" onClick={() => void play(item)} disabled={Boolean(busy)} title="Play"><ExternalLink size={16} /></button>
+                {item.backup_status !== 'backed_up' && (
+  <button className="secondary-button" type="button" onClick={() => void backup(item)} disabled={Boolean(busy)}>
+    {busy === item.id ? 'Backing up…' : 'Back up'}
+  </button>
+)}
+<button className="icon-button" type="button" onClick={() => void play(item)} disabled={Boolean(busy)} title="Play"><ExternalLink size={16} /></button>
                 <button className="icon-button" type="button" onClick={() => void download(item)} disabled={Boolean(busy)} title="Download"><Download size={16} /></button>
                 <button className="icon-button recording-delete" type="button" onClick={() => void remove(item)} disabled={Boolean(busy)} title="Delete"><Trash2 size={16} /></button>
                 {busy === item.id && <LoaderCircle className="spin-icon" size={15} />}

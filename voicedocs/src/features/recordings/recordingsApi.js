@@ -22,6 +22,11 @@ export async function fetchRecordings(page = 1, pageSize = 10) {
   return response.data
 }
 
+export async function backupRecording(recordingId) {
+  const response = await api.post(`/recordings/${recordingId}/backup`)
+  return response.data
+}
+
 export async function fetchRecordingContent(recordingId) {
   const response = await api.get(`/recordings/${recordingId}/content`, {
     responseType: 'blob',
@@ -39,6 +44,7 @@ export async function uploadBrowserRecording(formData, options = {}) {
   const params = {}
   if (options.duration != null) params.duration = options.duration
   if (options.language) params.language = options.language
+  if (options.documentId) formData.append('document_id', options.documentId)
   const response = await api.post('/recordings/upload', formData, {
     params,
     timeout: 0,
@@ -46,4 +52,18 @@ export async function uploadBrowserRecording(formData, options = {}) {
     headers: { 'Content-Type': undefined },
   })
   return response.data
+}
+
+
+let pendingBackupPromise = null
+
+export async function backupPendingFiles() {
+  if (pendingBackupPromise) return pendingBackupPromise
+  pendingBackupPromise = api.post('/google-drive/backup-pending', {}, { timeout: 0 })
+    .then((response) => {
+      window.dispatchEvent(new CustomEvent('voicedocs:backup-result', { detail: response.data }))
+      return response.data
+    })
+    .finally(() => { pendingBackupPromise = null })
+  return pendingBackupPromise
 }
