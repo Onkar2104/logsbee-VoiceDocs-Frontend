@@ -28,7 +28,7 @@ export default function WorkspaceSidebar() {
         if (preferences.automatic_backup_enabled && drive.connected) {
           await backupPendingFiles()
         }
-      } catch (error) {
+      } catch {
         // Pending files remain safely stored in VoiceDocs and are retried next time.
       } finally {
         running = false
