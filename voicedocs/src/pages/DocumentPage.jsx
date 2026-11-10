@@ -106,6 +106,7 @@ export default function DocumentPage() {
       await uploadBrowserRecording(formData, {
         duration: recording.duration,
         language: recording.language,
+        documentId: savedDocumentId,
       })
       // Remove each successful upload immediately so retrying after a later
       // failure does not create duplicate Drive recordings.
