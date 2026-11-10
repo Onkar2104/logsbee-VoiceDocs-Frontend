@@ -6,7 +6,7 @@ import VoiceDictation from '../components/VoiceDictation'
 import RichTextEditor from '../components/RichTextEditor'
 import WorkspaceSidebar from '../components/WorkspaceSidebar'
 import { downloadDocumentPdf, downloadDocumentWord } from '../features/documents/documentExport'
-import { createDocument, deleteDocument, fetchDocument, requestDocumentEditAccess, updateDocument } from '../features/documents/documentsApi'
+import { backupDocument, createDocument, deleteDocument, fetchDocument, requestDocumentEditAccess, updateDocument } from '../features/documents/documentsApi'
 import { fetchUserPreferences } from '../features/current-user/preferencesApi'
 import { uploadBrowserRecording } from '../features/recordings/recordingsApi'
 
@@ -34,6 +34,7 @@ export default function DocumentPage() {
   const [isDownloadMenuOpen, setIsDownloadMenuOpen] = useState(false)
   const [downloadFormat, setDownloadFormat] = useState('')
   const [pendingRecordings, setPendingRecordings] = useState([])
+  const [isBackingUp, setIsBackingUp] = useState(false)
   const contentTextareaRef = useRef(null)
 
   const isAccountAdmin = user?.role?.name?.trim().toLowerCase() === 'admin'
@@ -96,7 +97,7 @@ export default function DocumentPage() {
     }
   }
 
-  async function savePendingRecordings() {
+  async function savePendingRecordings(savedDocumentId) {
     if (!pendingRecordings.length) return
     for (const recording of pendingRecordings) {
       const formData = new FormData()
@@ -129,7 +130,7 @@ export default function DocumentPage() {
       setTitle(updated.title)
       setContent(updated.content)
       try {
-        await savePendingRecordings()
+        await savePendingRecordings(updated.id)
         setNotice(isNewDocument ? 'Your document has been created and its audio was saved to Google Drive.' : 'Your changes and pending audio have been saved.')
       } catch (audioError) {
         setError(audioError.response?.data?.detail || audioError.message || 'The document was saved, but its audio could not be uploaded to Google Drive. Save again to retry.')
@@ -139,6 +140,26 @@ export default function DocumentPage() {
       setError(requestError.response?.data?.detail || 'Could not save your changes.')
     } finally {
       setIsSaving(false)
+    }
+  }
+
+  async function handleBackup() {
+    if (!document?.id || document.id === 'new') return
+    setIsBackingUp(true)
+    setError('')
+    setNotice('')
+    try {
+      const result = await backupDocument(document.id)
+      const refreshed = await fetchDocument(document.id)
+      setDocument({ ...refreshed, audio_backup_status: result.audio_backup_status })
+      setContent(refreshed.content || '')
+      setNotice(result.audio_pending
+        ? `Document backed up. ${result.audio_pending} audio file(s) still need backup; you can retry.`
+        : 'Document and associated audio are backed up to Google Drive. Database file copies have been cleared.')
+    } catch (backupError) {
+      setError(backupError.response?.data?.detail || 'Backup failed. Your document and audio remain stored in VoiceDocs.')
+    } finally {
+      setIsBackingUp(false)
     }
   }
 
@@ -231,7 +252,17 @@ export default function DocumentPage() {
         <div className="document-editor-card">
           <div className="editor-toolbar">
             <span className="document-updated"><Clock3 size={14} /> Last updated {formatDate(document.updated_at)}</span>
+            {!isNewDocument && (
+              <span className={`backup-status ${document.backup_status === 'backed_up' && document.audio_backup_status !== 'not_backed_up' ? 'backup-status-done' : 'backup-status-pending'}`}>
+                {document.backup_status === 'backed_up' && document.audio_backup_status !== 'not_backed_up' ? 'Backed up to Drive' : 'Backup pending'}
+              </span>
+            )}
             <div className="document-toolbar-actions">
+              {!isNewDocument && canManage && (document.backup_status !== 'backed_up' || document.audio_backup_status === 'not_backed_up') && (
+                <button className="secondary-button" type="button" onClick={handleBackup} disabled={isBackingUp}>
+                  {isBackingUp ? 'Backing up…' : 'Back up to Google Drive'}
+                </button>
+              )}
               <div className="document-download-wrap">
                 <button
                   className="secondary-button document-download-button"
