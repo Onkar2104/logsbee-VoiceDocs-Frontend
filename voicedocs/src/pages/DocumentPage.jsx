@@ -106,8 +106,10 @@ export default function DocumentPage() {
         duration: recording.duration,
         language: recording.language,
       })
+      // Remove each successful upload immediately so retrying after a later
+      // failure does not create duplicate Drive recordings.
+      setPendingRecordings((current) => current.filter((item) => item !== recording))
     }
-    setPendingRecordings([])
   }
 
   async function handleSave(event) {
