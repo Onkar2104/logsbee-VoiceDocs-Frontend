@@ -84,8 +84,8 @@ export default function VoiceDictation({ onTranscript, defaultLanguage = 'en', t
       setIsTranscribing(true)
 
       if (selectedMode === 'live') {
-        // Commit the browser transcript to the document independently of the Drive backup.
-        // A temporary Google Drive/network failure must not discard recognized words.
+        // Keep the original recording in browser memory. The document page uploads it
+        // to Drive only after the user explicitly saves or creates the document.
         const transcript = finalTranscriptRef.current.trim()
         setPreview(transcript)
         if (transcript) {
@@ -291,7 +291,7 @@ export default function VoiceDictation({ onTranscript, defaultLanguage = 'en', t
           </div>
           {isTranscribing && <div className="voice-processing-indicator"><LoaderCircle className="spin-icon" size={18} /><span>Processing your audio and generating the transcript. Please wait…</span></div>}
           <p>{preview || (isRecording ? 'Speak clearly. Your transcript will appear here…' : 'Preparing transcript…')}</p>
-          {mode === 'live' && isRecording && <small>Speak naturally. Whisper will transcribe the complete recording when you stop.</small>}
+          {mode === 'live' && isRecording && <small>Speak naturally. Your transcript and audio stay in this draft until you save the document.</small>}
         </div>
       )}
       {error && <p className="voice-error" role="alert">{error}</p>}
