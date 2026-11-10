@@ -266,6 +266,9 @@ export default function DocumentPage() {
                 {document.backup_status === 'backed_up' && document.audio_backup_status !== 'not_backed_up' ? 'Backed up to Drive' : 'Backup pending'}
               </span>
             )}
+            {!isNewDocument && document.drive_web_view_link && (
+              <a className="secondary-button" href={document.drive_web_view_link} target="_blank" rel="noreferrer">Open in Google Drive</a>
+            )}
             <div className="document-toolbar-actions">
               {!isNewDocument && canManage && (document.backup_status !== 'backed_up' || document.audio_backup_status === 'not_backed_up') && (
                 <button className="secondary-button" type="button" onClick={handleBackup} disabled={isBackingUp}>
