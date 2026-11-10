@@ -39,6 +39,7 @@ export async function uploadBrowserRecording(formData, options = {}) {
   const params = {}
   if (options.duration != null) params.duration = options.duration
   if (options.language) params.language = options.language
+  if (options.documentId) formData.append('document_id', options.documentId)
   const response = await api.post('/recordings/upload', formData, {
     params,
     timeout: 0,
