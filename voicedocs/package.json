@@ -18,7 +18,8 @@
     "@tiptap/starter-kit": "^3.0.0",
     "axios": "^1.21.0",
     "docx": "^9.15.3",
-    "html2pdf.js": "^0.10.3",
+    "html2pdf.js": "^0.14.0",
+    "jspdf": "^4.2.1",
     "lucide-react": "^1.66.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
@@ -36,5 +37,8 @@
     "globals": "^17.13.0",
     "prettier": "^3.9.10",
     "vite": "^8.3.5"
+  },
+  "overrides": {
+    "minimatch": "^11.0.1"
   }
 }
