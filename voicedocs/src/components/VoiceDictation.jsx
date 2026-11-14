@@ -285,7 +285,7 @@ export default function VoiceDictation({ onTranscript, defaultLanguage = 'en', t
             <button type="button" className="voice-action-button" onClick={() => startRecording('live')} disabled={isTranscribing}><Mic size={15} /> Live dictation</button>
             <button type="button" className="voice-action-button voice-action-secondary" onClick={() => startRecording('record')} disabled={isTranscribing || indicLanguageUnsupported}><AudioLines size={15} /> Record & transcribe</button>
             <button type="button" className="voice-action-button voice-action-secondary" onClick={() => uploadInputRef.current?.click()} disabled={isTranscribing}><Upload size={15} /> Upload audio</button>
-            <input ref={uploadInputRef} className="voice-file-input" type="file" accept="audio/*,.webm,.wav,.mp3,.m4a,.mp4,.ogg,.aac,.flac" onChange={handleAudioUpload} disabled={isTranscribing || indicLanguageUnsupported} aria-label="Choose an audio file to transcribe" />
+            <input ref={uploadInputRef} className="voice-file-input" type="file" accept="audio/*,.webm,.wav,.mp3,.m4a,.mp4,.ogg,.aac,.flac" onChange={handleAudioUpload} disabled={isTranscribing} aria-label="Choose an audio file to transcribe" />
           </div>
         ) : (
           <button type="button" className="voice-action-button voice-stop-button" onClick={stopRecording}><Square size={14} /> Stop recording</button>
