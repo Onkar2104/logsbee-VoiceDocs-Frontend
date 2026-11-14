@@ -921,7 +921,7 @@
 .document-pagination > span { color: #788397; font-size: 12px; }
 .document-pagination .secondary-button:disabled { cursor: not-allowed; opacity: .5; }
 @media (max-width: 480px) { .document-pagination { gap: 8px; } .document-pagination .secondary-button { padding: 8px 10px; } .document-pagination > span { flex-basis: 100%; order: -1; } }
-/* Visible progress feedback while Whisper processes an audio recording/upload. */
+/* Visible progress feedback while browser speech recognition processes audio. */
 .voice-processing-indicator { display: flex; align-items: center; gap: 10px; margin: 12px 0; padding: 12px 14px; border: 1px solid #dce3ff; border-radius: 9px; color: #4056d4; background: #f4f6ff; font-size: 12px; font-weight: 650; }
 .voice-processing-indicator .spin-icon { flex: 0 0 auto; }
 
