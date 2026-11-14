@@ -23,6 +23,7 @@ function getErrorMessage(requestError) {
 
 export default function VoiceDictation({ onTranscript, defaultLanguage = 'en' }) {
   const [language, setLanguage] = useState(defaultLanguage || 'en')
+  const [englishLocale, setEnglishLocale] = useState('en-IN')
   const [previousDefaultLanguage, setPreviousDefaultLanguage] = useState(defaultLanguage)
   const [mode, setMode] = useState('live')
   const [isRecording, setIsRecording] = useState(false)
@@ -39,6 +40,7 @@ export default function VoiceDictation({ onTranscript, defaultLanguage = 'en' })
   const startedAtRef = useRef(0)
   const stoppingRef = useRef(false)
   const languageRef = useRef(language)
+  const englishLocaleRef = useRef('en-IN')
   const modeRef = useRef(mode)
   const recognitionRestartTimerRef = useRef(null)
   const recognitionRestartCountRef = useRef(0)
@@ -144,7 +146,7 @@ export default function VoiceDictation({ onTranscript, defaultLanguage = 'en' })
 
       {
         const recognition = new SpeechRecognition()
-        recognition.lang = SPEECH_LOCALES[languageRef.current] || languageRef.current
+        recognition.lang = languageRef.current === 'en' ? englishLocaleRef.current : (SPEECH_LOCALES[languageRef.current] || languageRef.current)
         recognition.continuous = true
         recognition.interimResults = true
         recognition.onresult = (event) => {
@@ -241,7 +243,7 @@ export default function VoiceDictation({ onTranscript, defaultLanguage = 'en' })
       const transcript = await transcribeUploadedAudioWithSpeechRecognition(
         file,
         SpeechRecognition,
-        SPEECH_LOCALES[languageRef.current] || languageRef.current,
+        languageRef.current === 'en' ? englishLocaleRef.current : (SPEECH_LOCALES[languageRef.current] || languageRef.current),
         setPreview,
       )
       setPreview(transcript)
@@ -275,6 +277,24 @@ export default function VoiceDictation({ onTranscript, defaultLanguage = 'en' })
             {SUPPORTED_LANGUAGES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
           </select>
         </label>
+        {language === 'en' && (
+          <label className="voice-language-field">
+            <span>English accent</span>
+            <select
+              value={englishLocale}
+              onChange={(event) => {
+                englishLocaleRef.current = event.target.value
+                setEnglishLocale(event.target.value)
+              }}
+              disabled={isRecording || isTranscribing}
+            >
+              <option value="en-IN">Indian English</option>
+              <option value="en-US">US English</option>
+              <option value="en-GB">UK English</option>
+              <option value="en-AU">Australian English</option>
+            </select>
+          </label>
+        )}
         {!isRecording ? (
           <div className="voice-start-actions">
             <button type="button" className="voice-action-button" onClick={() => startRecording('live')} disabled={isTranscribing}><Mic size={15} /> Live dictation</button>
@@ -286,7 +306,7 @@ export default function VoiceDictation({ onTranscript, defaultLanguage = 'en' })
           <button type="button" className="voice-action-button voice-stop-button" onClick={stopRecording}><Square size={14} /> Stop recording</button>
         )}
       </div>
-      <p className="voice-provider-note">Live dictation, recordings, and uploaded audio use Chrome’s native Web Speech API. It recognizes one selected language at a time; for Marathi–Hindi–English code-switching, choose the language spoken most often and switch the document language between separate sections. Clear audio and a quiet room also help.</p>
+      <p className="voice-provider-note">Live dictation, recordings, and uploaded audio use Chrome’s native Web Speech API. It recognizes one selected language at a time. For English, try the accent setting with the same recording and keep the locale that gives the best result. Clear audio and a quiet room also help.</p>
       {(isRecording || isTranscribing || preview) && (
         <div className="voice-transcript-preview" aria-live="polite">
           <div className="voice-preview-meta">
