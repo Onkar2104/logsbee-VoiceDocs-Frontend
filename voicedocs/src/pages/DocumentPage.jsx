@@ -26,7 +26,6 @@ export default function DocumentPage() {
   const [content, setContent] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [defaultLanguage, setDefaultLanguage] = useState('en')
-  const [transcriptionProvider, setTranscriptionProvider] = useState('whisper')
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
@@ -49,12 +48,10 @@ export default function DocumentPage() {
       try {
         const preferences = await fetchUserPreferences()
         setDefaultLanguage(preferences.transcription_language || 'en')
-        setTranscriptionProvider(preferences.transcription_provider || 'whisper')
       } catch (preferencesError) {
         // A preferences endpoint/migration issue must not prevent document access.
         console.warn('Could not load speech preferences; using defaults.', preferencesError)
         setDefaultLanguage('en')
-        setTranscriptionProvider('whisper')
       }
 
       if (isNewDocument) {
@@ -311,7 +308,7 @@ export default function DocumentPage() {
               <label htmlFor="edit-document-title">Document title <span className="required-label">*</span></label>
               <input id="edit-document-title" value={title} onChange={(event) => setTitle(event.target.value)} maxLength={255} required placeholder="Enter a document title" />
               <label htmlFor="edit-document-content">Content</label>
-              <VoiceDictation key={documentId} defaultLanguage={defaultLanguage} transcriptionProvider={transcriptionProvider} onTranscript={handleTranscriptInsert} />
+              <VoiceDictation key={documentId} defaultLanguage={defaultLanguage} onTranscript={handleTranscriptInsert} />
               <RichTextEditor editorRef={contentTextareaRef} value={content} onChange={setContent} />
               <div className="editor-actions">
                 <span className="editor-hint">{isNewDocument ? 'A title is required to create this document.' : 'Changes are saved to your VoiceDocs workspace.'}</span>
