@@ -21,6 +21,8 @@ export function transcribeUploadedAudioWithSpeechRecognition(file, SpeechRecogni
     let audioTrack
     let settled = false
     let finalText = ''
+    let completedSessionText = ''
+    let currentSessionText = ''
     let restartTimer
     let restartCount = 0
 
@@ -29,6 +31,7 @@ export function transcribeUploadedAudioWithSpeechRecognition(file, SpeechRecogni
     recognition.lang = language
     recognition.continuous = true
     recognition.interimResults = true
+    recognition.maxAlternatives = 3
 
     const cleanup = () => {
       if (restartTimer) clearTimeout(restartTimer)
@@ -52,11 +55,20 @@ export function transcribeUploadedAudioWithSpeechRecognition(file, SpeechRecogni
       const phrases = []
       let interim = ''
       for (let index = 0; index < event.results.length; index += 1) {
-        const phrase = event.results[index][0]?.transcript || ''
+        const alternatives = Array.from(event.results[index] || [])
+        const bestAlternative = alternatives.reduce((best, candidate) => (
+          !best || (Number(candidate.confidence) || 0) > (Number(best.confidence) || 0)
+            ? candidate
+            : best
+        ), null)
+        const phrase = bestAlternative?.transcript || ''
         if (event.results[index].isFinal) phrases.push(phrase.trim())
         else interim += phrase
       }
-      finalText = phrases.filter(Boolean).join(' ')
+      // Results are scoped to the current recognition session. Keep completed
+      // text from earlier Chrome sessions when recognition has to restart.
+      currentSessionText = phrases.filter(Boolean).join(' ')
+      finalText = [completedSessionText, currentSessionText].filter(Boolean).join(' ').trim()
       onTranscript([finalText, interim.trim()].filter(Boolean).join(' ').trim())
     }
 
@@ -71,6 +83,12 @@ export function transcribeUploadedAudioWithSpeechRecognition(file, SpeechRecogni
       if (audio.ended) {
         finish()
         return
+      }
+      if (currentSessionText) {
+        completedSessionText = [completedSessionText, currentSessionText].filter(Boolean).join(' ').trim()
+        currentSessionText = ''
+        finalText = completedSessionText
+        onTranscript(finalText)
       }
       if (audioTrack?.readyState !== 'live') {
         finish(new Error('The uploaded audio track ended before transcription completed.'))
