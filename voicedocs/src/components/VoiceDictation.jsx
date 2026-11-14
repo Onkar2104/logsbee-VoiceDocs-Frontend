@@ -198,8 +198,15 @@ export default function VoiceDictation({ onTranscript, defaultLanguage = 'en' })
       setIsRecording(true)
       recognitionRef.current.start()
     } catch (requestError) {
+      stoppingRef.current = true
+      if (recognitionRestartTimerRef.current) clearTimeout(recognitionRestartTimerRef.current)
+      try { recognitionRef.current?.abort() } catch { /* recognition may not have started */ }
+      if (recorderRef.current?.state === 'recording') recorderRef.current.stop()
       streamRef.current?.getTracks().forEach((track) => track.stop())
       streamRef.current = null
+      recorderRef.current = null
+      recognitionRef.current = null
+      setIsRecording(false)
       setError(requestError.name === 'NotAllowedError'
         ? 'Microphone permission was denied. Allow microphone access and try again.'
         : requestError.message || 'Could not access the microphone. Check your device settings.')
