@@ -6,7 +6,6 @@ import { SUPPORTED_LANGUAGES } from '../features/current-user/languages'
 
 export default function SettingsPage() {
   const [language, setLanguage] = useState('en')
-  const [provider, setProvider] = useState('whisper')
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState('')
@@ -18,7 +17,6 @@ export default function SettingsPage() {
       .then((preferences) => {
         if (!active) return
         setLanguage(preferences.transcription_language || 'en')
-        setProvider(preferences.transcription_provider || 'whisper')
       })
       .catch((requestError) => {
         if (active) setError(requestError.response?.data?.detail || 'Could not load your settings.')
@@ -58,7 +56,6 @@ export default function SettingsPage() {
             {SUPPORTED_LANGUAGES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
           </select>
           <p className="settings-help">This preference is applied whenever you open any document. Changing the language inside a document affects that document session only and will not change this setting.</p>
-          {provider === 'indicconformer' && <p className="settings-warning">Your server is configured to use IndicConformer, which currently transcribes Hindi and Marathi only. You can still save any default language, but choose Hindi or Marathi in a document to transcribe with this provider.</p>}
           {error && <p className="alert alert-error" role="alert">{error}</p>}
           {notice && <p className="alert alert-success" role="status">{notice}</p>}
           <div className="settings-actions"><button className="primary-button save-button" type="submit" disabled={isLoading || isSaving}><Save size={16} /> {isSaving ? 'Saving…' : 'Save settings'}</button></div>
