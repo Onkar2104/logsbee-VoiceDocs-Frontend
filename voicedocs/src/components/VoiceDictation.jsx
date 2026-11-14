@@ -21,7 +21,7 @@ function getErrorMessage(requestError) {
   return requestError?.message || 'Could not process this audio. Please try again.'
 }
 
-export default function VoiceDictation({ onTranscript, defaultLanguage = 'en', transcriptionProvider = 'whisper' }) {
+export default function VoiceDictation({ onTranscript, defaultLanguage = 'en' }) {
   const [language, setLanguage] = useState(defaultLanguage || 'en')
   const [previousDefaultLanguage, setPreviousDefaultLanguage] = useState(defaultLanguage)
   const [mode, setMode] = useState('live')
