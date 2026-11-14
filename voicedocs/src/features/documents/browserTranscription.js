@@ -21,6 +21,8 @@ export function transcribeUploadedAudioWithSpeechRecognition(file, SpeechRecogni
     let audioTrack
     let settled = false
     let finalText = ''
+    let restartTimer
+    let restartCount = 0
 
     audio.preload = 'auto'
     audio.src = objectUrl
@@ -29,6 +31,7 @@ export function transcribeUploadedAudioWithSpeechRecognition(file, SpeechRecogni
     recognition.interimResults = true
 
     const cleanup = () => {
+      if (restartTimer) clearTimeout(restartTimer)
       audio.pause()
       audio.removeAttribute('src')
       audio.load()
@@ -45,6 +48,7 @@ export function transcribeUploadedAudioWithSpeechRecognition(file, SpeechRecogni
     }
 
     recognition.onresult = (event) => {
+      restartCount = 0
       const phrases = []
       let interim = ''
       for (let index = 0; index < event.results.length; index += 1) {
@@ -68,12 +72,21 @@ export function transcribeUploadedAudioWithSpeechRecognition(file, SpeechRecogni
         finish()
         return
       }
-      try {
-        if (audioTrack?.readyState === 'live') recognition.start(audioTrack)
-        else finish(new Error('The uploaded audio track ended before transcription completed.'))
-      } catch (error) {
-        finish(error)
+      if (audioTrack?.readyState !== 'live') {
+        finish(new Error('The uploaded audio track ended before transcription completed.'))
+        return
       }
+      // Chrome can close a continuous session while the file is still playing.
+      // Reconnect a limited number of times instead of silently losing the rest.
+      if (restartCount >= 8) {
+        finish(new Error('Chrome repeatedly paused speech recognition before the audio finished. Try a shorter audio clip or split it into sections.'))
+        return
+      }
+      restartCount += 1
+      restartTimer = setTimeout(() => {
+        if (settled || audio.ended || audioTrack?.readyState !== 'live') return
+        try { recognition.start(audioTrack) } catch (error) { finish(error) }
+      }, 300)
     }
 
     audio.onerror = () => finish(new Error('The selected audio file could not be played by this browser.'))
@@ -89,8 +102,10 @@ export function transcribeUploadedAudioWithSpeechRecognition(file, SpeechRecogni
         if (!audioTrack || audioTrack.readyState !== 'live') {
           throw new Error('Could not create a live audio track from this file.')
         }
-        await audio.play()
+        // Start recognition before playback so the beginning of the recording
+        // is less likely to be missed while Chrome initializes its speech service.
         recognition.start(audioTrack)
+        await audio.play()
       } catch (error) {
         finish(error)
       }
