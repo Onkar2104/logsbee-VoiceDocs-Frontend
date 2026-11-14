@@ -1,81 +1,101 @@
-const MODEL_ID = 'onnx-community/whisper-tiny'
-const TARGET_SAMPLE_RATE = 16000
-
-let transcriberPromise
-
-const WHISPER_LANGUAGES = {
-  en: 'english', hi: 'hindi', mr: 'marathi', bn: 'bengali',
-  gu: 'gujarati', kn: 'kannada', ml: 'malayalam', pa: 'punjabi',
-  ta: 'tamil', te: 'telugu', ur: 'urdu', as: 'assamese',
-  or: 'odia', ne: 'nepali', sa: 'sanskrit', ar: 'arabic',
-  fr: 'french', de: 'german', es: 'spanish', it: 'italian',
-  ja: 'japanese', ko: 'korean', pt: 'portuguese', ru: 'russian',
-  zh: 'chinese', tr: 'turkish', vi: 'vietnamese', th: 'thai',
-  id: 'indonesian', nl: 'dutch', pl: 'polish', uk: 'ukrainian',
-  sw: 'swahili',
+function getCaptureStream(audio) {
+  if (typeof audio.captureStream === 'function') return audio.captureStream()
+  if (typeof audio.mozCaptureStream === 'function') return audio.mozCaptureStream()
+  throw new Error('This browser cannot capture an audio track from uploaded files. Use a current desktop Chrome or Edge browser.')
 }
 
-async function getTranscriber(onProgress) {
-  if (!transcriberPromise) {
-    transcriberPromise = (async () => {
-      // Load Transformers.js only when an uploaded file needs transcription.
-      // @vite-ignore keeps Vite from trying to bundle this browser-side CDN module.
-      const { pipeline, env } = await import(/* @vite-ignore */ 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1')
-      env.allowLocalModels = false
-      return pipeline('automatic-speech-recognition', MODEL_ID, {
-        progress_callback: onProgress,
-      })
-    })().catch((error) => {
-      transcriberPromise = null
-      throw error
-    })
-  }
-  return transcriberPromise
-}
+/**
+ * Transcribe an uploaded audio file using the native Web Speech API.
+ * The file is played by an HTMLAudioElement and its captured audio track is
+ * supplied directly to SpeechRecognition.start(audioTrack).
+ */
+export function transcribeUploadedAudioWithSpeechRecognition(file, SpeechRecognition, language, onTranscript = () => {}) {
+  if (!file) return Promise.reject(new Error('Choose an audio file first.'))
+  if (!SpeechRecognition) return Promise.reject(new Error('Speech recognition is not available in this browser.'))
 
-async function decodeAudioFile(file) {
-  const AudioContextClass = window.AudioContext || window.webkitAudioContext
-  if (!AudioContextClass) {
-    throw new Error('This browser does not support local audio processing. Try the latest Chrome or Edge.')
-  }
+  return new Promise((resolve, reject) => {
+    const audio = new Audio()
+    const objectUrl = URL.createObjectURL(file)
+    const recognition = new SpeechRecognition()
+    let stream
+    let audioTrack
+    let settled = false
+    let finalText = ''
 
-  const context = new AudioContextClass()
-  try {
-    const audioBuffer = await context.decodeAudioData(await file.arrayBuffer())
-    const sourceRate = audioBuffer.sampleRate
-    const outputLength = Math.ceil(audioBuffer.length * TARGET_SAMPLE_RATE / sourceRate)
-    const output = new Float32Array(outputLength)
-    const channels = Array.from({ length: audioBuffer.numberOfChannels }, (_, index) => audioBuffer.getChannelData(index))
+    audio.preload = 'auto'
+    audio.src = objectUrl
+    recognition.lang = language
+    recognition.continuous = true
+    recognition.interimResults = true
 
-    // Convert to mono 16 kHz PCM, the input format expected by Whisper.
-    for (let index = 0; index < outputLength; index += 1) {
-      const sourcePosition = index * sourceRate / TARGET_SAMPLE_RATE
-      const left = Math.floor(sourcePosition)
-      const right = Math.min(left + 1, audioBuffer.length - 1)
-      const fraction = sourcePosition - left
-      let sample = 0
-      for (const channel of channels) {
-        sample += channel[left] * (1 - fraction) + channel[right] * fraction
-      }
-      output[index] = sample / channels.length
+    const cleanup = () => {
+      audio.pause()
+      audio.removeAttribute('src')
+      audio.load()
+      stream?.getTracks().forEach((track) => track.stop())
+      URL.revokeObjectURL(objectUrl)
     }
-    return output
-  } finally {
-    await context.close()
-  }
-}
 
-export async function transcribeUploadedAudioInBrowser(file, language, onProgress) {
-  if (!file) throw new Error('Choose an audio file first.')
-  const audio = await decodeAudioFile(file)
-  if (!audio.length) throw new Error('The selected audio file is empty or could not be decoded.')
+    const finish = (error) => {
+      if (settled) return
+      settled = true
+      cleanup()
+      if (error) reject(error)
+      else resolve(finalText.trim())
+    }
 
-  const transcriber = await getTranscriber(onProgress)
-  const result = await transcriber(audio, {
-    language: WHISPER_LANGUAGES[language] || undefined,
-    task: 'transcribe',
-    chunk_length_s: 30,
-    stride_length_s: 5,
+    recognition.onresult = (event) => {
+      const phrases = []
+      let interim = ''
+      for (let index = 0; index < event.results.length; index += 1) {
+        const phrase = event.results[index][0]?.transcript || ''
+        if (event.results[index].isFinal) phrases.push(phrase.trim())
+        else interim += phrase
+      }
+      finalText = phrases.filter(Boolean).join(' ')
+      onTranscript([finalText, interim.trim()].filter(Boolean).join(' ').trim())
+    }
+
+    recognition.onerror = (event) => {
+      if (event.error !== 'aborted') {
+        finish(new Error(`Browser speech recognition failed: ${event.error}. Check browser support and the selected language.`))
+      }
+    }
+
+    recognition.onend = () => {
+      if (settled) return
+      if (audio.ended) {
+        finish()
+        return
+      }
+      try {
+        if (audioTrack?.readyState === 'live') recognition.start(audioTrack)
+        else finish(new Error('The uploaded audio track ended before transcription completed.'))
+      } catch (error) {
+        finish(error)
+      }
+    }
+
+    audio.onerror = () => finish(new Error('The selected audio file could not be played by this browser.'))
+    audio.onended = () => {
+      try { recognition.stop() } catch { finish() }
+    }
+
+    audio.oncanplay = async () => {
+      audio.oncanplay = null
+      try {
+        stream = getCaptureStream(audio)
+        audioTrack = stream.getAudioTracks()[0]
+        if (!audioTrack || audioTrack.readyState !== 'live') {
+          throw new Error('Could not create a live audio track from this file.')
+        }
+        await audio.play()
+        recognition.start(audioTrack)
+      } catch (error) {
+        finish(error)
+      }
+    }
+
+    audio.load()
   })
-  return (result?.text || '').trim()
 }
