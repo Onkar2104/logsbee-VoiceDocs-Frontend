@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { AudioLines, LoaderCircle, Mic, Square, Upload } from 'lucide-react'
 import { transcribeAudio } from '../features/documents/documentsApi'
+import { transcribeUploadedAudioInBrowser } from '../features/documents/browserTranscription'
 import { SUPPORTED_LANGUAGES } from '../features/current-user/languages'
 
 const SPEECH_LOCALES = {
@@ -29,6 +30,7 @@ export default function VoiceDictation({ onTranscript, defaultLanguage = 'en', t
   const [isTranscribing, setIsTranscribing] = useState(false)
   const [preview, setPreview] = useState('')
   const [detectedLanguage, setDetectedLanguage] = useState('')
+  const [modelProgress, setModelProgress] = useState('')
   const [error, setError] = useState('')
   const recorderRef = useRef(null)
   const recognitionRef = useRef(null)
@@ -226,16 +228,26 @@ export default function VoiceDictation({ onTranscript, defaultLanguage = 'en', t
       setError('Audio files must be 25 MB or smaller.')
       return
     }
-    if (transcriptionProvider === 'indicconformer' && !['hi', 'mr'].includes(languageRef.current)) {
-      setError('The backend is configured for IndicConformer, which supports Hindi and Marathi only. Change the document language to Hindi or Marathi before uploading audio.')
-      return
-    }
     setError('')
     setPreview('')
     setDetectedLanguage('')
+    setModelProgress('')
     setIsTranscribing(true)
     try {
-      const transcript = await transcribeBlob(file, file.name)
+      const transcript = await transcribeUploadedAudioInBrowser(
+        file,
+        languageRef.current,
+        (progress) => {
+          if (progress?.status === 'progress' && progress.file) {
+            setModelProgress(`Downloading ${progress.file}… ${Math.round(progress.progress || 0)}%`)
+          } else if (progress?.status === 'initiate') {
+            setModelProgress('Preparing the browser transcription model…')
+          } else if (progress?.status === 'done') {
+            setModelProgress('Model ready. Transcribing audio on this device…')
+          }
+        },
+      )
+      setPreview(transcript)
       if (transcript) onTranscript(transcript, {
         blob: file,
         filename: file.name,
@@ -249,6 +261,7 @@ export default function VoiceDictation({ onTranscript, defaultLanguage = 'en', t
       setError(getErrorMessage(requestError))
     } finally {
       setIsTranscribing(false)
+      setModelProgress('')
     }
   }
 
@@ -258,7 +271,7 @@ export default function VoiceDictation({ onTranscript, defaultLanguage = 'en', t
     <section className="voice-dictation" aria-label="Voice to text">
       <div className="voice-dictation-heading">
         <div><AudioLines size={18} /><strong>Voice to text</strong></div>
-        <span>{transcriptionProvider === 'indicconformer' ? 'IndicConformer · Hindi and Marathi' : 'Whisper · Server transcription'}</span>
+        <span>Browser Whisper · On-device upload transcription</span>
       </div>
       <div className="voice-dictation-controls">
         <label className="voice-language-field">
@@ -271,16 +284,17 @@ export default function VoiceDictation({ onTranscript, defaultLanguage = 'en', t
           <div className="voice-start-actions">
             <button type="button" className="voice-action-button" onClick={() => startRecording('live')} disabled={isTranscribing}><Mic size={15} /> Live dictation</button>
             <button type="button" className="voice-action-button voice-action-secondary" onClick={() => startRecording('record')} disabled={isTranscribing || indicLanguageUnsupported}><AudioLines size={15} /> Record & transcribe</button>
-            <button type="button" className="voice-action-button voice-action-secondary" onClick={() => uploadInputRef.current?.click()} disabled={isTranscribing || indicLanguageUnsupported}><Upload size={15} /> Upload audio</button>
+            <button type="button" className="voice-action-button voice-action-secondary" onClick={() => uploadInputRef.current?.click()} disabled={isTranscribing}><Upload size={15} /> Upload audio</button>
             <input ref={uploadInputRef} className="voice-file-input" type="file" accept="audio/*,.webm,.wav,.mp3,.m4a,.mp4,.ogg,.aac,.flac" onChange={handleAudioUpload} disabled={isTranscribing || indicLanguageUnsupported} aria-label="Choose an audio file to transcribe" />
           </div>
         ) : (
           <button type="button" className="voice-action-button voice-stop-button" onClick={stopRecording}><Square size={14} /> Stop recording</button>
         )}
       </div>
+      <p className="voice-provider-note">Uploaded audio is transcribed locally in your browser with Whisper. The first use downloads the model; performance depends on your device.</p>
       {transcriptionProvider === 'indicconformer' && (
         <p className="voice-provider-note">
-          The server uses IndicConformer for Record &amp; transcribe and Upload audio (Hindi and Marathi only). Live dictation uses your browser's speech recognition and follows the selected document language.
+          Record &amp; transcribe uses the configured server provider. Upload audio always uses browser-based Whisper and does not send the audio file to the VoiceDocs transcription API.
         </p>
       )}
       {(isRecording || isTranscribing || preview) && (
@@ -289,7 +303,7 @@ export default function VoiceDictation({ onTranscript, defaultLanguage = 'en', t
             <span>{isRecording ? (mode === 'live' ? 'Listening · live preview' : 'Recording audio') : isTranscribing ? 'Transcribing / saving audio…' : 'Transcript ready'}</span>
             {detectedLanguage && <span>Detected: {detectedLanguage.toUpperCase()}</span>}
           </div>
-          {isTranscribing && <div className="voice-processing-indicator"><LoaderCircle className="spin-icon" size={18} /><span>Processing your audio and generating the transcript. Please wait…</span></div>}
+          {isTranscribing && <div className="voice-processing-indicator"><LoaderCircle className="spin-icon" size={18} /><span>{modelProgress || 'Processing audio and generating the transcript on this device…'}</span></div>}
           <p>{preview || (isRecording ? 'Speak clearly. Your transcript will appear here…' : 'Preparing transcript…')}</p>
           {mode === 'live' && isRecording && <small>Speak naturally. Your transcript and audio stay in this draft until you save the document.</small>}
         </div>
