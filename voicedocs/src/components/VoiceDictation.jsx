@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { AudioLines, LoaderCircle, Mic, Square, Upload } from 'lucide-react'
-import { transcribeAudio } from '../features/documents/documentsApi'
-import { transcribeUploadedAudioInBrowser } from '../features/documents/browserTranscription'
+import { transcribeUploadedAudioWithSpeechRecognition } from '../features/documents/browserTranscription'
 import { SUPPORTED_LANGUAGES } from '../features/current-user/languages'
 
 const SPEECH_LOCALES = {
@@ -30,7 +29,6 @@ export default function VoiceDictation({ onTranscript, defaultLanguage = 'en', t
   const [isTranscribing, setIsTranscribing] = useState(false)
   const [preview, setPreview] = useState('')
   const [detectedLanguage, setDetectedLanguage] = useState('')
-  const [modelProgress, setModelProgress] = useState('')
   const [error, setError] = useState('')
   const recorderRef = useRef(null)
   const recognitionRef = useRef(null)
@@ -64,17 +62,6 @@ export default function VoiceDictation({ onTranscript, defaultLanguage = 'en', t
     return [finalTranscriptRef.current.trim(), interimTranscriptRef.current.trim()].filter(Boolean).join(' ').trim()
   }
 
-  async function transcribeBlob(blob, filename) {
-    const formData = new FormData()
-    formData.append('file', blob, filename)
-    // The backend selects Whisper or IndicConformer from TRANSCRIPTION_PROVIDER in its .env.
-    // Do not send a provider override from the browser.
-    const result = await transcribeAudio(formData, languageRef.current)
-    setDetectedLanguage(result.language || '')
-    setPreview(result.text || '')
-    return result.text || ''
-  }
-
   async function finishRecording(selectedMode, recorder, stream) {
     setIsRecording(false)
     stream.getTracks().forEach((track) => track.stop())
@@ -85,45 +72,26 @@ export default function VoiceDictation({ onTranscript, defaultLanguage = 'en', t
       const duration = Math.max(0, (Date.now() - startedAtRef.current) / 1000)
       setIsTranscribing(true)
 
-      if (selectedMode === 'live') {
-        // Keep the original recording in browser memory. The document page uploads it
-        // to Drive only after the user explicitly saves or creates the document.
-        const transcript = finalTranscriptRef.current.trim()
-        setPreview(transcript)
-        if (transcript) {
-          const mimeType = recorder.mimeType || blob.type || 'audio/webm'
-          const extension = mimeType.includes('ogg') ? 'ogg'
-            : mimeType.includes('mp4') ? 'm4a'
-              : mimeType.includes('wav') ? 'wav'
-                : 'webm'
-          onTranscript(transcript, blob.size ? {
-            blob,
-            filename: `live-dictation.${extension}`,
-            mimeType,
-            duration,
-            language: languageRef.current,
-            transcript,
-          } : null)
-        } else {
-          setError('No speech was recognized. No audio will be saved unless you create a document.')
-        }
-      } else {
-        if (!blob.size) throw new Error('No audio was captured.')
+      // Both microphone modes use the browser's Web Speech API. Keep the
+      // captured audio with the draft so it can be backed up when the document is saved.
+      const transcript = finalTranscriptRef.current.trim()
+      setPreview(transcript)
+      if (transcript) {
         const mimeType = recorder.mimeType || blob.type || 'audio/webm'
         const extension = mimeType.includes('ogg') ? 'ogg'
           : mimeType.includes('mp4') ? 'm4a'
             : mimeType.includes('wav') ? 'wav'
               : 'webm'
-        const transcript = await transcribeBlob(blob, `recording.${extension}`)
-        if (transcript) onTranscript(transcript, {
+        onTranscript(transcript, blob.size ? {
           blob,
-          filename: `recording.${extension}`,
+          filename: selectedMode === 'live' ? `live-dictation.${extension}` : `recording.${extension}`,
           mimeType,
           duration,
           language: languageRef.current,
           transcript,
-        })
-        else setError('No speech was detected in this recording.')
+        } : null)
+      } else {
+        setError('No speech was recognized in this recording.')
       }
     } catch (requestError) {
       setError(getErrorMessage(requestError))
@@ -145,18 +113,13 @@ export default function VoiceDictation({ onTranscript, defaultLanguage = 'en', t
     interimTranscriptRef.current = ''
     stoppingRef.current = false
 
-    if (selectedMode !== 'live' && transcriptionProvider === 'indicconformer' && !['hi', 'mr'].includes(languageRef.current)) {
-      setError('The backend is configured for IndicConformer, which supports Hindi and Marathi only. Change the document language to Hindi or Marathi, or use Live dictation.')
-      return
-    }
-
     if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
       setError('Audio recording is not supported. Use a recent Chrome or Edge browser over HTTPS or localhost.')
       return
     }
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
-    if (selectedMode === 'live' && !SpeechRecognition) {
+    if (!SpeechRecognition) {
       setError('Live dictation is not supported in this browser. Use a recent Chrome or Edge browser.')
       return
     }
@@ -170,7 +133,7 @@ export default function VoiceDictation({ onTranscript, defaultLanguage = 'en', t
       recorder.ondataavailable = (event) => { if (event.data?.size) chunksRef.current.push(event.data) }
       recorder.onstop = () => { void finishRecording(selectedMode, recorder, stream) }
 
-      if (selectedMode === 'live') {
+      {
         const recognition = new SpeechRecognition()
         recognition.lang = SPEECH_LOCALES[languageRef.current] || languageRef.current
         recognition.continuous = true
@@ -201,7 +164,7 @@ export default function VoiceDictation({ onTranscript, defaultLanguage = 'en', t
 
       recorder.start(1000)
       setIsRecording(true)
-      if (selectedMode === 'live') recognitionRef.current.start()
+      recognitionRef.current.start()
     } catch (requestError) {
       streamRef.current?.getTracks().forEach((track) => track.stop())
       streamRef.current = null
@@ -231,21 +194,17 @@ export default function VoiceDictation({ onTranscript, defaultLanguage = 'en', t
     setError('')
     setPreview('')
     setDetectedLanguage('')
-    setModelProgress('')
     setIsTranscribing(true)
     try {
-      const transcript = await transcribeUploadedAudioInBrowser(
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
+      if (!SpeechRecognition) {
+        throw new Error('Uploaded-audio transcription is not supported in this browser. Use a recent desktop Chrome or Edge version.')
+      }
+      const transcript = await transcribeUploadedAudioWithSpeechRecognition(
         file,
-        languageRef.current,
-        (progress) => {
-          if (progress?.status === 'progress' && progress.file) {
-            setModelProgress(`Downloading ${progress.file}… ${Math.round(progress.progress || 0)}%`)
-          } else if (progress?.status === 'initiate') {
-            setModelProgress('Preparing the browser transcription model…')
-          } else if (progress?.status === 'done') {
-            setModelProgress('Model ready. Transcribing audio on this device…')
-          }
-        },
+        SpeechRecognition,
+        SPEECH_LOCALES[languageRef.current] || languageRef.current,
+        setPreview,
       )
       setPreview(transcript)
       if (transcript) onTranscript(transcript, {
@@ -261,17 +220,15 @@ export default function VoiceDictation({ onTranscript, defaultLanguage = 'en', t
       setError(getErrorMessage(requestError))
     } finally {
       setIsTranscribing(false)
-      setModelProgress('')
     }
   }
 
-  const indicLanguageUnsupported = transcriptionProvider === 'indicconformer' && !['hi', 'mr'].includes(language)
 
   return (
     <section className="voice-dictation" aria-label="Voice to text">
       <div className="voice-dictation-heading">
         <div><AudioLines size={18} /><strong>Voice to text</strong></div>
-        <span>Browser Whisper · On-device upload transcription</span>
+        <span>Web Speech API · Browser speech recognition</span>
       </div>
       <div className="voice-dictation-controls">
         <label className="voice-language-field">
@@ -283,7 +240,7 @@ export default function VoiceDictation({ onTranscript, defaultLanguage = 'en', t
         {!isRecording ? (
           <div className="voice-start-actions">
             <button type="button" className="voice-action-button" onClick={() => startRecording('live')} disabled={isTranscribing}><Mic size={15} /> Live dictation</button>
-            <button type="button" className="voice-action-button voice-action-secondary" onClick={() => startRecording('record')} disabled={isTranscribing || indicLanguageUnsupported}><AudioLines size={15} /> Record & transcribe</button>
+            <button type="button" className="voice-action-button voice-action-secondary" onClick={() => startRecording('record')} disabled={isTranscribing}><AudioLines size={15} /> Record & transcribe</button>
             <button type="button" className="voice-action-button voice-action-secondary" onClick={() => uploadInputRef.current?.click()} disabled={isTranscribing}><Upload size={15} /> Upload audio</button>
             <input ref={uploadInputRef} className="voice-file-input" type="file" accept="audio/*,.webm,.wav,.mp3,.m4a,.mp4,.ogg,.aac,.flac" onChange={handleAudioUpload} disabled={isTranscribing} aria-label="Choose an audio file to transcribe" />
           </div>
@@ -291,19 +248,14 @@ export default function VoiceDictation({ onTranscript, defaultLanguage = 'en', t
           <button type="button" className="voice-action-button voice-stop-button" onClick={stopRecording}><Square size={14} /> Stop recording</button>
         )}
       </div>
-      <p className="voice-provider-note">Uploaded audio is transcribed locally in your browser with Whisper. The first use downloads the model; performance depends on your device.</p>
-      {transcriptionProvider === 'indicconformer' && (
-        <p className="voice-provider-note">
-          Record &amp; transcribe uses the configured server provider. Upload audio always uses browser-based Whisper and does not send the audio file to the VoiceDocs transcription API.
-        </p>
-      )}
+      <p className="voice-provider-note">Live dictation, recordings, and uploaded audio use the browser Web Speech API. Uploaded audio is played through an audio track; support depends on the browser and language.</p>
       {(isRecording || isTranscribing || preview) && (
         <div className="voice-transcript-preview" aria-live="polite">
           <div className="voice-preview-meta">
             <span>{isRecording ? (mode === 'live' ? 'Listening · live preview' : 'Recording audio') : isTranscribing ? 'Transcribing / saving audio…' : 'Transcript ready'}</span>
             {detectedLanguage && <span>Detected: {detectedLanguage.toUpperCase()}</span>}
           </div>
-          {isTranscribing && <div className="voice-processing-indicator"><LoaderCircle className="spin-icon" size={18} /><span>{modelProgress || 'Processing audio and generating the transcript on this device…'}</span></div>}
+          {isTranscribing && <div className="voice-processing-indicator"><LoaderCircle className="spin-icon" size={18} /><span>Playing audio into browser speech recognition…</span></div>}
           <p>{preview || (isRecording ? 'Speak clearly. Your transcript will appear here…' : 'Preparing transcript…')}</p>
           {mode === 'live' && isRecording && <small>Speak naturally. Your transcript and audio stay in this draft until you save the document.</small>}
         </div>
