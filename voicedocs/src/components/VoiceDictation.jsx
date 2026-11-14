@@ -40,6 +40,8 @@ export default function VoiceDictation({ onTranscript, defaultLanguage = 'en' })
   const stoppingRef = useRef(false)
   const languageRef = useRef(language)
   const modeRef = useRef(mode)
+  const recognitionRestartTimerRef = useRef(null)
+  const recognitionRestartCountRef = useRef(0)
 
   // React's conditional render-time state adjustment keeps a changed account default
   // in sync without scheduling a cascading update from an effect.
@@ -54,6 +56,7 @@ export default function VoiceDictation({ onTranscript, defaultLanguage = 'en' })
     stoppingRef.current = true
     try { recognitionRef.current?.abort() } catch { /* browser may already have stopped */ }
     if (recorderRef.current?.state === 'recording') recorderRef.current.stop()
+    if (recognitionRestartTimerRef.current) clearTimeout(recognitionRestartTimerRef.current)
     streamRef.current?.getTracks().forEach((track) => track.stop())
   }, [])
 
@@ -110,6 +113,8 @@ export default function VoiceDictation({ onTranscript, defaultLanguage = 'en' })
     finalTranscriptRef.current = ''
     interimTranscriptRef.current = ''
     stoppingRef.current = false
+    recognitionRestartCountRef.current = 0
+    if (recognitionRestartTimerRef.current) clearTimeout(recognitionRestartTimerRef.current)
 
     if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
       setError('Audio recording is not supported. Use a recent Chrome or Edge browser over HTTPS or localhost.')
@@ -123,7 +128,13 @@ export default function VoiceDictation({ onTranscript, defaultLanguage = 'en' })
     }
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+      })
       streamRef.current = stream
       startedAtRef.current = Date.now()
       const recorder = new MediaRecorder(stream)
@@ -138,6 +149,7 @@ export default function VoiceDictation({ onTranscript, defaultLanguage = 'en' })
         recognition.interimResults = true
         recognition.onresult = (event) => {
           let interim = ''
+          recognitionRestartCountRef.current = 0
           for (let index = event.resultIndex; index < event.results.length; index += 1) {
             const phrase = event.results[index][0]?.transcript || ''
             if (event.results[index].isFinal) {
@@ -150,12 +162,34 @@ export default function VoiceDictation({ onTranscript, defaultLanguage = 'en' })
           setPreview(currentTranscript())
         }
         recognition.onerror = (event) => {
-          if (event.error !== 'no-speech' && event.error !== 'aborted') {
-            setError(`Live dictation error: ${event.error}. Check microphone permission and try again.`)
+          if (event.error === 'not-allowed' || event.error === 'service-not-allowed' || event.error === 'audio-capture' || event.error === 'language-not-supported') {
+            setError(`Live dictation stopped: ${event.error}. Check microphone permission and the selected language.`)
+            stoppingRef.current = true
+          } else if (event.error !== 'no-speech' && event.error !== 'aborted') {
+            setError(`Live dictation warning: ${event.error}. Voice recognition will try to reconnect.`)
           }
         }
         recognition.onend = () => {
-          if (stoppingRef.current && recorderRef.current?.state === 'recording') recorderRef.current.stop()
+          if (stoppingRef.current) {
+            if (recorderRef.current?.state === 'recording') recorderRef.current.stop()
+            return
+          }
+          // Chrome may end a continuous recognition session after a short interval.
+          // Restart the same locale while the microphone recording is still active.
+          if (recorderRef.current?.state === 'recording' && recognitionRestartCountRef.current < 8) {
+            recognitionRestartCountRef.current += 1
+            recognitionRestartTimerRef.current = setTimeout(() => {
+              if (!stoppingRef.current && recorderRef.current?.state === 'recording') {
+                try { recognition.start() } catch (restartError) {
+                  setError(`Could not resume voice recognition: ${restartError.message || 'please stop and start again.'}`)
+                }
+              }
+            }, 300)
+          } else if (recorderRef.current?.state === 'recording') {
+            setError('Voice recognition paused repeatedly. Stop and start dictation again; your captured audio is retained.')
+            stoppingRef.current = true
+            recorderRef.current.stop()
+          }
         }
         recognitionRef.current = recognition
       }
@@ -191,7 +225,6 @@ export default function VoiceDictation({ onTranscript, defaultLanguage = 'en' })
     }
     setError('')
     setPreview('')
-    setDetectedLanguage('')
     setIsTranscribing(true)
     try {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
@@ -246,7 +279,7 @@ export default function VoiceDictation({ onTranscript, defaultLanguage = 'en' })
           <button type="button" className="voice-action-button voice-stop-button" onClick={stopRecording}><Square size={14} /> Stop recording</button>
         )}
       </div>
-      <p className="voice-provider-note">Live dictation, recordings, and uploaded audio use the browser Web Speech API. Uploaded audio is played through an audio track; support depends on the browser and language.</p>
+      <p className="voice-provider-note">Live dictation, recordings, and uploaded audio use Chrome’s native Web Speech API. It recognizes one selected language at a time; for Marathi–Hindi–English code-switching, choose the language spoken most often and switch the document language between separate sections. Clear audio and a quiet room also help.</p>
       {(isRecording || isTranscribing || preview) && (
         <div className="voice-transcript-preview" aria-live="polite">
           <div className="voice-preview-meta">
