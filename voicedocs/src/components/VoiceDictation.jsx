@@ -28,7 +28,6 @@ export default function VoiceDictation({ onTranscript, defaultLanguage = 'en' })
   const [isRecording, setIsRecording] = useState(false)
   const [isTranscribing, setIsTranscribing] = useState(false)
   const [preview, setPreview] = useState('')
-  const [detectedLanguage, setDetectedLanguage] = useState('')
   const [error, setError] = useState('')
   const recorderRef = useRef(null)
   const recognitionRef = useRef(null)
@@ -105,7 +104,6 @@ export default function VoiceDictation({ onTranscript, defaultLanguage = 'en' })
   async function startRecording(selectedMode) {
     setError('')
     setPreview('')
-    setDetectedLanguage('')
     setMode(selectedMode)
     modeRef.current = selectedMode
     chunksRef.current = []
@@ -175,7 +173,7 @@ export default function VoiceDictation({ onTranscript, defaultLanguage = 'en' })
   }
 
   function stopRecording() {
-    if (modeRef.current === 'live' && recognitionRef.current) {
+    if (recognitionRef.current) {
       stoppingRef.current = true
       try { recognitionRef.current.stop() } catch { /* onend will finalize if already stopped */ }
       return
@@ -252,8 +250,7 @@ export default function VoiceDictation({ onTranscript, defaultLanguage = 'en' })
       {(isRecording || isTranscribing || preview) && (
         <div className="voice-transcript-preview" aria-live="polite">
           <div className="voice-preview-meta">
-            <span>{isRecording ? (mode === 'live' ? 'Listening · live preview' : 'Recording audio') : isTranscribing ? 'Transcribing / saving audio…' : 'Transcript ready'}</span>
-            {detectedLanguage && <span>Detected: {detectedLanguage.toUpperCase()}</span>}
+            <span>{isRecording ? (mode === 'live' ? 'Listening · live preview' : 'Recording audio') : isTranscribing ? 'Transcribing audio…' : 'Transcript ready'}</span>
           </div>
           {isTranscribing && <div className="voice-processing-indicator"><LoaderCircle className="spin-icon" size={18} /><span>Playing audio into browser speech recognition…</span></div>}
           <p>{preview || (isRecording ? 'Speak clearly. Your transcript will appear here…' : 'Preparing transcript…')}</p>
