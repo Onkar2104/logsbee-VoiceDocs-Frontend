@@ -82,16 +82,22 @@ export default function DocumentPage() {
     return () => { cancelled = true }
   }, [loadDocument])
 
-  function handleTranscriptInsert(transcript, recording = null) {
+  function handleTranscriptInsert(transcript, recording = null, options = {}) {
     const editor = contentTextareaRef.current
     if (!editor) return
-    editor.chain().focus().insertContent(transcript.trim()).run()
+    if (!options.alreadyInserted && transcript?.trim()) editor.chain().focus().insertContent(transcript.trim()).run()
     if (recording?.blob?.size) {
       setPendingRecordings((current) => [...current, recording])
       setNotice('Transcription inserted. Audio will be saved to Google Drive when you create or save this document.')
     } else {
       setNotice('Transcription inserted. Save your document to keep the changes.')
     }
+  }
+
+  function handleLiveTranscriptInsert(phrase) {
+    const editor = contentTextareaRef.current
+    if (!editor || !phrase?.trim()) return
+    editor.chain().focus().insertContent(`${phrase.trim()} `).run()
   }
 
   async function savePendingRecordings(savedDocumentId) {
@@ -308,7 +314,7 @@ export default function DocumentPage() {
               <label htmlFor="edit-document-title">Document title <span className="required-label">*</span></label>
               <input id="edit-document-title" value={title} onChange={(event) => setTitle(event.target.value)} maxLength={255} required placeholder="Enter a document title" />
               <label htmlFor="edit-document-content">Content</label>
-              <VoiceDictation key={documentId} defaultLanguage={defaultLanguage} onTranscript={handleTranscriptInsert} />
+              <VoiceDictation key={documentId} defaultLanguage={defaultLanguage} onTranscript={handleTranscriptInsert} onLiveTranscript={handleLiveTranscriptInsert} />
               <RichTextEditor editorRef={contentTextareaRef} value={content} onChange={setContent} />
               <div className="editor-actions">
                 <span className="editor-hint">{isNewDocument ? 'A title is required to create this document.' : 'Changes are saved to your VoiceDocs workspace.'}</span>
