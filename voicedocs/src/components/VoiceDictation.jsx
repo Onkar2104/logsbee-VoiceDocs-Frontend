@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { AudioLines, LoaderCircle, Mic, Square, Upload } from 'lucide-react'
+import { AudioLines, Mic, Square, Upload } from 'lucide-react'
 import { transcribeUploadedAudioWithSpeechRecognition } from '../features/documents/browserTranscription'
 import { SUPPORTED_LANGUAGES } from '../features/current-user/languages'
 
@@ -28,7 +28,7 @@ export default function VoiceDictation({ onTranscript, onLiveTranscript, default
   const [mode, setMode] = useState('live')
   const [isRecording, setIsRecording] = useState(false)
   const [isTranscribing, setIsTranscribing] = useState(false)
-  const [preview, setPreview] = useState('')
+  const [, setPreview] = useState('')
   const [error, setError] = useState('')
   const recorderRef = useRef(null)
   const recognitionRef = useRef(null)
@@ -314,16 +314,6 @@ export default function VoiceDictation({ onTranscript, onLiveTranscript, default
           <button type="button" className="voice-action-button voice-stop-button" onClick={stopRecording}><Square size={14} /> Stop recording</button>
         )}
       </div>
-      {false && (
-        <div className="voice-transcript-preview" aria-live="polite">
-          <div className="voice-preview-meta">
-            <span>{isRecording ? (mode === 'live' ? 'Listening · live preview' : 'Recording audio') : isTranscribing ? 'Transcribing audio…' : 'Transcript ready'}</span>
-          </div>
-          {isTranscribing && <div className="voice-processing-indicator"><LoaderCircle className="spin-icon" size={18} /><span>Playing audio into browser speech recognition…</span></div>}
-          <p>{preview || (isRecording ? 'Speak clearly. Your transcript will appear here…' : 'Preparing transcript…')}</p>
-          {mode === 'live' && isRecording && <small>Speak naturally. Your transcript and audio stay in this draft until you save the document.</small>}
-        </div>
-      )}
       {error && <p className="voice-error" role="alert">{error}</p>}
     </section>
   )
