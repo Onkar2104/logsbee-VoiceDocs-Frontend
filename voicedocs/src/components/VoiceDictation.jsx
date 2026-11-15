@@ -21,7 +21,7 @@ function getErrorMessage(requestError) {
   return requestError?.message || 'Could not process this audio. Please try again.'
 }
 
-export default function VoiceDictation({ onTranscript, defaultLanguage = 'en' }) {
+export default function VoiceDictation({ onTranscript, onLiveTranscript, defaultLanguage = 'en' }) {
   const [language, setLanguage] = useState(defaultLanguage || 'en')
   const [englishLocale, setEnglishLocale] = useState('en-IN')
   const [previousDefaultLanguage, setPreviousDefaultLanguage] = useState(defaultLanguage)
@@ -93,7 +93,7 @@ export default function VoiceDictation({ onTranscript, defaultLanguage = 'en' })
           duration,
           language: languageRef.current,
           transcript,
-        } : null)
+        } : null, { alreadyInserted: selectedMode === 'live' })
       } else {
         setError('No speech was recognized in this recording.')
       }
@@ -161,6 +161,15 @@ export default function VoiceDictation({ onTranscript, defaultLanguage = 'en' })
             }
           }
           interimTranscriptRef.current = interim
+          if (modeRef.current === 'live') {
+            const latestFinal = Array.from(event.results)
+              .slice(event.resultIndex)
+              .filter((result) => result.isFinal)
+              .map((result) => result[0]?.transcript?.trim())
+              .filter(Boolean)
+              .join(' ')
+            if (latestFinal) onLiveTranscript?.(latestFinal)
+          }
           setPreview(currentTranscript())
         }
         recognition.onerror = (event) => {
@@ -268,7 +277,6 @@ export default function VoiceDictation({ onTranscript, defaultLanguage = 'en' })
     <section className="voice-dictation" aria-label="Voice to text">
       <div className="voice-dictation-heading">
         <div><AudioLines size={18} /><strong>Voice to text</strong></div>
-        <span>Web Speech API · Browser speech recognition</span>
       </div>
       <div className="voice-dictation-controls">
         <label className="voice-language-field">
@@ -306,8 +314,7 @@ export default function VoiceDictation({ onTranscript, defaultLanguage = 'en' })
           <button type="button" className="voice-action-button voice-stop-button" onClick={stopRecording}><Square size={14} /> Stop recording</button>
         )}
       </div>
-      <p className="voice-provider-note">Live dictation, recordings, and uploaded audio use Chrome’s native Web Speech API. It recognizes one selected language at a time. For English, try the accent setting with the same recording and keep the locale that gives the best result. Clear audio and a quiet room also help.</p>
-      {(isRecording || isTranscribing || preview) && (
+      {false && (
         <div className="voice-transcript-preview" aria-live="polite">
           <div className="voice-preview-meta">
             <span>{isRecording ? (mode === 'live' ? 'Listening · live preview' : 'Recording audio') : isTranscribing ? 'Transcribing audio…' : 'Transcript ready'}</span>
