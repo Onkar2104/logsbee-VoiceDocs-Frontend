@@ -160,13 +160,14 @@ export default function DocumentPage() {
       if (!isNewDocument && activeTab === 'formatted' && activeVersionId) {
         const updatedOriginal = await updateDocument(documentId, { title: title.trim(), content })
         setDocument(updatedOriginal)
+        const audioBackupPending = await savePendingRecordings(updatedOriginal.id)
         const savedVersion = await replaceDocumentVersion(documentId, activeVersionId, formattedContent)
         setFormattedContent(savedVersion.content_html || formattedContent)
         const versionData = await fetchDocumentVersions(documentId)
         setVersions(versionData.items || [])
-        setNotice(savedVersion.backup_status === 'backed_up'
+        setNotice(savedVersion.backup_status === 'backed_up' && !audioBackupPending
           ? 'Formatted version saved and backed up to Google Drive.'
-          : 'Formatted version saved in VoiceDocs. Google Drive backup is pending.')
+          : 'Formatted version saved in VoiceDocs. A Google Drive backup is pending.')
         return
       }
       const updated = isNewDocument
@@ -203,15 +204,16 @@ export default function DocumentPage() {
       const savedOriginal = await updateDocument(document.id, { title: title.trim(), content })
       setDocument(savedOriginal)
       setContent(savedOriginal.content || content)
+      const audioBackupPending = await savePendingRecordings(savedOriginal.id)
       const result = await formatDocument(document.id)
       setFormattedContent(result.content_html || '')
       setActiveVersionId(result.id)
       const versionData = await fetchDocumentVersions(document.id)
       setVersions(versionData.items || [])
       setActiveTab('formatted')
-      setNotice(result.backup_status === 'backed_up'
+      setNotice(result.backup_status === 'backed_up' && !audioBackupPending
         ? 'Your formatted document is ready and backed up to Google Drive.'
-        : 'Your formatted document is ready. It is saved in VoiceDocs; Google Drive backup is pending.')
+        : 'Your formatted document is ready and saved in VoiceDocs. A Google Drive backup is pending.')
     } catch (formatError) {
       setError(formatError.response?.data?.detail || 'Could not format this document. Please try again.')
     } finally {
@@ -227,14 +229,15 @@ export default function DocumentPage() {
     try {
       const updatedOriginal = await updateDocument(document.id, { title: title.trim(), content })
       setDocument(updatedOriginal)
+      const audioBackupPending = await savePendingRecordings(updatedOriginal.id)
       const result = await createDocumentVersion(document.id, formattedContent)
       setActiveVersionId(result.id)
       setFormattedContent(result.content_html || formattedContent)
       const versionData = await fetchDocumentVersions(document.id)
       setVersions(versionData.items || [])
-      setNotice(result.backup_status === 'backed_up'
+      setNotice(result.backup_status === 'backed_up' && !audioBackupPending
         ? 'A new formatted version was saved and backed up to Google Drive.'
-        : 'A new formatted version was saved in VoiceDocs. Google Drive backup is pending.')
+        : 'A new formatted version was saved in VoiceDocs. A Google Drive backup is pending.')
     } catch (saveError) {
       setError(saveError.response?.data?.detail || 'Could not save a new formatted version.')
     } finally {
