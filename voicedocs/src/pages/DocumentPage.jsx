@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ArrowLeft, Clock3, Download, FileText, Save, Trash2 } from 'lucide-react'
+import { ArrowLeft, Clock3, Download, FileText, Save, Trash2, Sparkles, History } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../context/useAuth'
 import VoiceDictation from '../components/VoiceDictation'
 import RichTextEditor from '../components/RichTextEditor'
 import WorkspaceSidebar from '../components/WorkspaceSidebar'
 import { downloadDocumentPdf, downloadDocumentWord } from '../features/documents/documentExport'
-import { backupDocument, createDocument, deleteDocument, fetchDocument, requestDocumentEditAccess, updateDocument } from '../features/documents/documentsApi'
+import { backupDocument, createDocument, deleteDocument, fetchDocument, requestDocumentEditAccess, updateDocument, formatDocument, fetchDocumentVersions, fetchDocumentVersion, replaceDocumentVersion, createDocumentVersion, setActiveDocumentVersion } from '../features/documents/documentsApi'
 import { fetchUserPreferences } from '../features/current-user/preferencesApi'
 import { uploadBrowserRecording } from '../features/recordings/recordingsApi'
 
@@ -24,6 +24,12 @@ export default function DocumentPage() {
   const [document, setDocument] = useState(null)
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
+  const [formattedContent, setFormattedContent] = useState('')
+  const [versions, setVersions] = useState([])
+  const [activeVersionId, setActiveVersionId] = useState(null)
+  const [activeTab, setActiveTab] = useState('original')
+  const [isFormatting, setIsFormatting] = useState(false)
+  const [isSavingVersion, setIsSavingVersion] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [defaultLanguage, setDefaultLanguage] = useState('en')
   const [isSaving, setIsSaving] = useState(false)
@@ -58,6 +64,10 @@ export default function DocumentPage() {
         setDocument({ id: 'new', title: '', content: '', updated_at: null, owner_user_id: user?.id })
         setTitle('')
         setContent('')
+        setFormattedContent('')
+        setVersions([])
+        setActiveVersionId(null)
+        setActiveTab('original')
         return
       }
 
@@ -65,6 +75,23 @@ export default function DocumentPage() {
       setDocument(result)
       setTitle(result.title || '')
       setContent(result.content || '')
+      setActiveTab('original')
+      try {
+        const versionData = await fetchDocumentVersions(result.id)
+        setVersions(versionData.items || [])
+        setActiveVersionId(versionData.active_version_id || null)
+        if (versionData.active_version_id) {
+          const savedVersion = await fetchDocumentVersion(result.id, versionData.active_version_id)
+          setFormattedContent(savedVersion.content_html || '')
+        } else {
+          setFormattedContent('')
+        }
+      } catch (versionError) {
+        console.warn('Could not load formatted document versions.', versionError)
+        setVersions([])
+        setActiveVersionId(null)
+        setFormattedContent('')
+      }
     } catch (requestError) {
       setError(requestError.response?.data?.detail || 'Could not load this document.')
     } finally {
@@ -130,6 +157,16 @@ export default function DocumentPage() {
     setError('')
     setNotice('')
     try {
+      if (!isNewDocument && activeTab === 'formatted' && activeVersionId) {
+        const updatedOriginal = await updateDocument(documentId, { title: title.trim(), content })
+        setDocument(updatedOriginal)
+        const savedVersion = await replaceDocumentVersion(documentId, activeVersionId, formattedContent)
+        setFormattedContent(savedVersion.content_html || formattedContent)
+        setNotice(savedVersion.backup_status === 'backed_up'
+          ? 'Formatted version saved and backed up to Google Drive.'
+          : 'Formatted version saved in VoiceDocs. Google Drive backup is pending.')
+        return
+      }
       const updated = isNewDocument
         ? await createDocument({ title: title.trim(), content })
         : await updateDocument(documentId, { title: title.trim(), content })
@@ -152,6 +189,63 @@ export default function DocumentPage() {
       setError(requestError.response?.data?.detail || 'Could not save your changes.')
     } finally {
       setIsSaving(false)
+    }
+  }
+
+  async function handleFormatDocument() {
+    if (!document?.id || document.id === 'new') return
+    setIsFormatting(true)
+    setError('')
+    setNotice('')
+    try {
+      const result = await formatDocument(document.id)
+      setFormattedContent(result.content_html || '')
+      setActiveVersionId(result.id)
+      const versionData = await fetchDocumentVersions(document.id)
+      setVersions(versionData.items || [])
+      setActiveTab('formatted')
+      setNotice(result.backup_status === 'backed_up'
+        ? 'Your formatted document is ready and backed up to Google Drive.'
+        : 'Your formatted document is ready. It is saved in VoiceDocs; Google Drive backup is pending.')
+    } catch (formatError) {
+      setError(formatError.response?.data?.detail || 'Could not format this document. Please try again.')
+    } finally {
+      setIsFormatting(false)
+    }
+  }
+
+  async function handleSaveAsNewVersion() {
+    if (!document?.id || document.id === 'new' || !formattedContent.trim()) return
+    setIsSavingVersion(true)
+    setError('')
+    setNotice('')
+    try {
+      const result = await createDocumentVersion(document.id, formattedContent)
+      setActiveVersionId(result.id)
+      setFormattedContent(result.content_html || formattedContent)
+      const versionData = await fetchDocumentVersions(document.id)
+      setVersions(versionData.items || [])
+      setNotice(result.backup_status === 'backed_up'
+        ? 'A new formatted version was saved and backed up to Google Drive.'
+        : 'A new formatted version was saved in VoiceDocs. Google Drive backup is pending.')
+    } catch (saveError) {
+      setError(saveError.response?.data?.detail || 'Could not save a new formatted version.')
+    } finally {
+      setIsSavingVersion(false)
+    }
+  }
+
+  async function handleSelectVersion(versionId) {
+    if (!versionId || versionId === activeVersionId) return
+    setError('')
+    try {
+      await setActiveDocumentVersion(document.id, versionId)
+      const selected = await fetchDocumentVersion(document.id, versionId)
+      setActiveVersionId(versionId)
+      setFormattedContent(selected.content_html || '')
+      setNotice(`Loaded formatted version ${selected.version_number}.`)
+    } catch (loadError) {
+      setError(loadError.response?.data?.detail || 'Could not load that formatted version.')
     }
   }
 
@@ -205,7 +299,7 @@ export default function DocumentPage() {
     setNotice('')
     try {
       const exportTitle = canManage ? title : document.title
-      const exportContent = canManage ? content : document.content
+      const exportContent = canManage ? (activeTab === 'formatted' ? formattedContent : content) : document.content
       if (format === 'pdf') {
         await downloadDocumentPdf(exportTitle, exportContent)
       } else {
@@ -314,12 +408,43 @@ export default function DocumentPage() {
               <label htmlFor="edit-document-title">Document title <span className="required-label">*</span></label>
               <input id="edit-document-title" value={title} onChange={(event) => setTitle(event.target.value)} maxLength={255} required placeholder="Enter a document title" />
               <label htmlFor="edit-document-content">Content</label>
-              <VoiceDictation key={documentId} defaultLanguage={defaultLanguage} onTranscript={handleTranscriptInsert} onLiveTranscript={handleLiveTranscriptInsert} />
-              <RichTextEditor editorRef={contentTextareaRef} value={content} onChange={setContent} />
-              <div className="editor-actions">
-                <span className="editor-hint">{isNewDocument ? 'A title is required to create this document.' : 'Changes are saved to your VoiceDocs workspace.'}</span>
-                <button className="primary-button save-button" type="submit" disabled={isSaving || !title.trim()}><Save size={16} /> {isSaving ? 'Saving…' : isNewDocument ? 'Create document' : 'Save changes'}</button>
-              </div>
+              {!isNewDocument && (
+                <div className="document-content-tabs" role="tablist" aria-label="Document content">
+                  <button type="button" role="tab" aria-selected={activeTab === 'original'} className={activeTab === 'original' ? 'active' : ''} onClick={() => setActiveTab('original')}>Original Transcript</button>
+                  <button type="button" role="tab" aria-selected={activeTab === 'formatted'} className={activeTab === 'formatted' ? 'active' : ''} onClick={() => setActiveTab('formatted')}>Formatted Document</button>
+                </div>
+              )}
+              {activeTab === 'original' || isNewDocument ? (
+                <>
+                  <VoiceDictation key={documentId} defaultLanguage={defaultLanguage} onTranscript={handleTranscriptInsert} onLiveTranscript={handleLiveTranscriptInsert} />
+                  <RichTextEditor editorRef={contentTextareaRef} value={content} onChange={setContent} />
+                  <div className="editor-actions">
+                    <span className="editor-hint">{isNewDocument ? 'A title is required to create this document.' : 'The original transcript is kept separately from formatted versions.'}</span>
+                    <div className="document-version-actions">
+                      {!isNewDocument && <button className="secondary-button" type="button" onClick={handleFormatDocument} disabled={isFormatting || !content.trim()}><Sparkles size={16} /> {isFormatting ? 'Formatting…' : 'Format Document'}</button>}
+                      <button className="primary-button save-button" type="submit" disabled={isSaving || !title.trim()}><Save size={16} /> {isSaving ? 'Saving…' : isNewDocument ? 'Create document' : 'Save original'}</button>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="formatted-version-toolbar">
+                    <label htmlFor="formatted-version-select"><History size={15} /> Saved versions</label>
+                    <select id="formatted-version-select" value={activeVersionId || ''} onChange={(event) => void handleSelectVersion(event.target.value)}>
+                      {versions.map((version) => <option key={version.id} value={version.id}>Version {version.version_number} · {formatDate(version.created_at)}</option>)}
+                    </select>
+                    <button className="secondary-button" type="button" onClick={handleFormatDocument} disabled={isFormatting || !content.trim()}><Sparkles size={15} /> {isFormatting ? 'Formatting…' : 'Format again'}</button>
+                  </div>
+                  <RichTextEditor value={formattedContent} onChange={setFormattedContent} />
+                  <div className="editor-actions">
+                    <span className="editor-hint">The original transcript remains unchanged.</span>
+                    <div className="document-version-actions">
+                      <button className="secondary-button" type="button" onClick={handleSaveAsNewVersion} disabled={isSavingVersion || !formattedContent.trim()}>{isSavingVersion ? 'Saving…' : 'Save as new version'}</button>
+                      <button className="primary-button save-button" type="submit" disabled={isSaving || !title.trim() || !activeVersionId}><Save size={16} /> {isSaving ? 'Saving…' : 'Replace current version'}</button>
+                    </div>
+                  </div>
+                </>
+              )}
             </form>
           ) : (
             <div className="document-readonly">
