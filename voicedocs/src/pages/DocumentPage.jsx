@@ -225,6 +225,8 @@ export default function DocumentPage() {
     setError('')
     setNotice('')
     try {
+      const updatedOriginal = await updateDocument(document.id, { title: title.trim(), content })
+      setDocument(updatedOriginal)
       const result = await createDocumentVersion(document.id, formattedContent)
       setActiveVersionId(result.id)
       setFormattedContent(result.content_html || formattedContent)
@@ -254,6 +256,18 @@ export default function DocumentPage() {
       setError(backupError.response?.data?.detail || 'Formatted version backup failed. It remains saved in VoiceDocs.')
     } finally {
       setIsSavingVersion(false)
+    }
+  }
+
+  async function handleViewVersion(versionId) {
+    if (!versionId || versionId === activeVersionId) return
+    setError('')
+    try {
+      const selected = await fetchDocumentVersion(document.id, versionId)
+      setActiveVersionId(versionId)
+      setFormattedContent(selected.content_html || '')
+    } catch (loadError) {
+      setError(loadError.response?.data?.detail || 'Could not load that formatted version.')
     }
   }
 
@@ -478,7 +492,25 @@ export default function DocumentPage() {
               <div className="readonly-notice">You have view access to this document. Request edit access from its owner if you need to make changes.</div>
               <div className="readonly-actions"><button className="primary-button save-button" type="button" onClick={handleRequestEditAccess} disabled={isRequestingAccess}>{isRequestingAccess ? 'Sending request…' : 'Request edit access'}</button></div>
               <h2>{document.title}</h2>
-              <RichTextEditor value={document.content || ''} editable={false} />
+              <div className="document-content-tabs" role="tablist" aria-label="Document content">
+                <button type="button" role="tab" aria-selected={activeTab === 'original'} className={activeTab === 'original' ? 'active' : ''} onClick={() => setActiveTab('original')}>Original Transcript</button>
+                <button type="button" role="tab" aria-selected={activeTab === 'formatted'} className={activeTab === 'formatted' ? 'active' : ''} onClick={() => setActiveTab('formatted')}>Formatted Document</button>
+              </div>
+              {activeTab === 'original' ? (
+                <RichTextEditor value={document.content || ''} editable={false} />
+              ) : (
+                <>
+                  {versions.length > 0 && (
+                    <div className="formatted-version-toolbar">
+                      <label htmlFor="readonly-version-select"><History size={15} /> Saved versions</label>
+                      <select id="readonly-version-select" value={activeVersionId || ''} onChange={(event) => void handleViewVersion(event.target.value)}>
+                        {versions.map((version) => <option key={version.id} value={version.id}>Version {version.version_number} · {formatDate(version.created_at)}</option>)}
+                      </select>
+                    </div>
+                  )}
+                  {formattedContent ? <RichTextEditor value={formattedContent} editable={false} /> : <p>No formatted version has been saved yet.</p>}
+                </>
+              )}
             </div>
           )}
         </div>
