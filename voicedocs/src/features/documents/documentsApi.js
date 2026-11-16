@@ -41,3 +41,33 @@ export async function fetchSharingSummary() {
   const response = await api.get('/documents/sharing-summary')
   return response.data
 }
+
+export async function formatDocument(documentId) {
+  const response = await api.post(`/documents/${documentId}/format`)
+  return response.data
+}
+
+export async function fetchDocumentVersions(documentId) {
+  const response = await api.get(`/documents/${documentId}/versions`)
+  return response.data
+}
+
+export async function fetchDocumentVersion(documentId, versionId) {
+  const response = await api.get(`/documents/${documentId}/versions/${versionId}`)
+  return response.data
+}
+
+export async function replaceDocumentVersion(documentId, versionId, contentHtml) {
+  const response = await api.put(`/documents/${documentId}/versions/${versionId}`, { content_html: contentHtml })
+  return response.data
+}
+
+export async function setActiveDocumentVersion(documentId, versionId) {
+  const response = await api.patch(`/documents/${documentId}/active-version/${versionId}`)
+  return response.data
+}
+
+export async function backupDocumentVersion(documentId, versionId) {
+  const response = await api.post(`/documents/${documentId}/versions/${versionId}/backup`)
+  return response.data
+}
