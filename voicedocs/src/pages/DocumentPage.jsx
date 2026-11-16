@@ -261,7 +261,7 @@ export default function DocumentPage() {
       setContent(refreshed.content || '')
       setNotice(result.audio_pending
         ? `Document backed up. ${result.audio_pending} audio file(s) still need backup; you can retry.`
-        : 'Document and associated audio are backed up to Google Drive. Database file copies have been cleared.')
+        : 'Document and associated audio are backed up to Google Drive. VoiceDocs database copies are retained.')
     } catch (backupError) {
       setError(backupError.response?.data?.detail || 'Backup failed. Your document and audio remain stored in VoiceDocs.')
     } finally {
