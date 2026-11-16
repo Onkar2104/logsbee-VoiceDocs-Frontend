@@ -6,7 +6,7 @@ import VoiceDictation from '../components/VoiceDictation'
 import RichTextEditor from '../components/RichTextEditor'
 import WorkspaceSidebar from '../components/WorkspaceSidebar'
 import { downloadDocumentPdf, downloadDocumentWord } from '../features/documents/documentExport'
-import { backupDocument, createDocument, deleteDocument, fetchDocument, requestDocumentEditAccess, updateDocument, formatDocument, fetchDocumentVersions, fetchDocumentVersion, replaceDocumentVersion, createDocumentVersion, setActiveDocumentVersion } from '../features/documents/documentsApi'
+import { backupDocument, createDocument, deleteDocument, fetchDocument, requestDocumentEditAccess, updateDocument, formatDocument, fetchDocumentVersions, fetchDocumentVersion, replaceDocumentVersion, createDocumentVersion, setActiveDocumentVersion, backupDocumentVersion } from '../features/documents/documentsApi'
 import { fetchUserPreferences } from '../features/current-user/preferencesApi'
 import { uploadBrowserRecording } from '../features/recordings/recordingsApi'
 
@@ -162,6 +162,8 @@ export default function DocumentPage() {
         setDocument(updatedOriginal)
         const savedVersion = await replaceDocumentVersion(documentId, activeVersionId, formattedContent)
         setFormattedContent(savedVersion.content_html || formattedContent)
+        const versionData = await fetchDocumentVersions(documentId)
+        setVersions(versionData.items || [])
         setNotice(savedVersion.backup_status === 'backed_up'
           ? 'Formatted version saved and backed up to Google Drive.'
           : 'Formatted version saved in VoiceDocs. Google Drive backup is pending.')
@@ -230,6 +232,23 @@ export default function DocumentPage() {
         : 'A new formatted version was saved in VoiceDocs. Google Drive backup is pending.')
     } catch (saveError) {
       setError(saveError.response?.data?.detail || 'Could not save a new formatted version.')
+    } finally {
+      setIsSavingVersion(false)
+    }
+  }
+
+  async function handleBackupFormattedVersion() {
+    if (!document?.id || !activeVersionId) return
+    setIsSavingVersion(true)
+    setError('')
+    setNotice('')
+    try {
+      await backupDocumentVersion(document.id, activeVersionId)
+      const versionData = await fetchDocumentVersions(document.id)
+      setVersions(versionData.items || [])
+      setNotice('Formatted version backed up to Google Drive. VoiceDocs database copy is retained.')
+    } catch (backupError) {
+      setError(backupError.response?.data?.detail || 'Formatted version backup failed. It remains saved in VoiceDocs.')
     } finally {
       setIsSavingVersion(false)
     }
@@ -421,7 +440,7 @@ export default function DocumentPage() {
                   <div className="editor-actions">
                     <span className="editor-hint">{isNewDocument ? 'A title is required to create this document.' : 'The original transcript is kept separately from formatted versions.'}</span>
                     <div className="document-version-actions">
-                      {!isNewDocument && <button className="secondary-button" type="button" onClick={handleFormatDocument} disabled={isFormatting || !content.trim()}><Sparkles size={16} /> {isFormatting ? 'Formatting…' : 'Format Document'}</button>}
+                      {!isNewDocument && <button className="secondary-button" type="button" onClick={handleFormatDocument} disabled={isFormatting || !content.trim()}><Sparkles size={16} /> {isFormatting ? 'AI is formatting your document…' : 'Format Document'}</button>}
                       <button className="primary-button save-button" type="submit" disabled={isSaving || !title.trim()}><Save size={16} /> {isSaving ? 'Saving…' : isNewDocument ? 'Create document' : 'Save original'}</button>
                     </div>
                   </div>
@@ -433,7 +452,12 @@ export default function DocumentPage() {
                     <select id="formatted-version-select" value={activeVersionId || ''} onChange={(event) => void handleSelectVersion(event.target.value)}>
                       {versions.map((version) => <option key={version.id} value={version.id}>Version {version.version_number} · {formatDate(version.created_at)}</option>)}
                     </select>
-                    <button className="secondary-button" type="button" onClick={handleFormatDocument} disabled={isFormatting || !content.trim()}><Sparkles size={15} /> {isFormatting ? 'Formatting…' : 'Format again'}</button>
+                    <button className="secondary-button" type="button" onClick={handleFormatDocument} disabled={isFormatting || !content.trim()}><Sparkles size={15} /> {isFormatting ? 'AI is formatting your document…' : 'Format again'}</button>
+                    {versions.find((version) => version.id === activeVersionId)?.backup_status !== 'backed_up' && (
+                      <button className="secondary-button" type="button" onClick={handleBackupFormattedVersion} disabled={isSavingVersion}>
+                        {isSavingVersion ? 'Backing up…' : 'Back up formatted version'}
+                      </button>
+                    )}
                   </div>
                   <RichTextEditor value={formattedContent} onChange={setFormattedContent} />
                   <div className="editor-actions">
