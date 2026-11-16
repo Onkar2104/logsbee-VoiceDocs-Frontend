@@ -200,6 +200,9 @@ export default function DocumentPage() {
     setError('')
     setNotice('')
     try {
+      const savedOriginal = await updateDocument(document.id, { title: title.trim(), content })
+      setDocument(savedOriginal)
+      setContent(savedOriginal.content || content)
       const result = await formatDocument(document.id)
       setFormattedContent(result.content_html || '')
       setActiveVersionId(result.id)
