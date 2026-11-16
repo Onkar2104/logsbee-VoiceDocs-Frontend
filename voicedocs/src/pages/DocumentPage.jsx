@@ -335,7 +335,7 @@ export default function DocumentPage() {
     setNotice('')
     try {
       const exportTitle = canManage ? title : document.title
-      const exportContent = canManage ? (activeTab === 'formatted' ? formattedContent : content) : document.content
+      const exportContent = activeTab === 'formatted' ? formattedContent : (canManage ? content : document.content)
       if (format === 'pdf') {
         await downloadDocumentPdf(exportTitle, exportContent)
       } else {
