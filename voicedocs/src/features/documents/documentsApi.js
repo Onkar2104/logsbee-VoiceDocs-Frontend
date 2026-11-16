@@ -71,3 +71,7 @@ export async function backupDocumentVersion(documentId, versionId) {
   const response = await api.post(`/documents/${documentId}/versions/${versionId}/backup`)
   return response.data
 }
+export async function createDocumentVersion(documentId, contentHtml) {
+  const response = await api.post(`/documents/${documentId}/versions`, { content_html: contentHtml })
+  return response.data
+}
