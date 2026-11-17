@@ -282,6 +282,7 @@ export default function DocumentPage() {
     try {
       // Browsing history is local to this editor; saving a version changes the active version.
       const selected = await fetchDocumentVersion(document.id, versionId)
+      setSelectedVersionId(versionId)
       setFormattedContent(selected.content_html || '')
       setNotice(`Loaded formatted version ${selected.version_number}.`)
     } catch (loadError) {
