@@ -3,6 +3,7 @@ import {
   AlignmentType,
   Document,
   HeadingLevel,
+  LevelFormat,
   Packer,
   Paragraph,
   TextRun,
@@ -77,7 +78,25 @@ function paragraphFromElement(element) {
       HeadingLevel.HEADING_4, HeadingLevel.HEADING_5, HeadingLevel.HEADING_6][level - 1]
   }
 
-  if (tag === 'li') options.bullet = { indent: 360 }
+  if (tag === 'li') {
+    const list = element.closest('ol,ul')
+    const listLevel = Math.max(0, Math.min(8, Array.from(element.parentElement?.parentElement?.querySelectorAll(':scope > ol, :scope > ul') || []).length))
+    const nestingLevel = Math.max(0, Math.min(8, (() => {
+      let depth = 0
+      let parent = element.parentElement
+      while (parent && parent !== element.ownerDocument.body) {
+        if (parent.matches?.('ol,ul')) depth += 1
+        parent = parent.parentElement
+      }
+      return depth - 1
+    })()))
+
+    if (list?.tagName.toLowerCase() === 'ol') {
+      options.numbering = { reference: 'voicedocs-ordered-list', level: nestingLevel }
+    } else {
+      options.bullet = { indent: 360 + nestingLevel * 360, hanging: 180 }
+    }
+  }
   if (tag === 'blockquote') options.indent = { left: 720 }
   if (element.style?.textAlign === 'center') options.alignment = AlignmentType.CENTER
   if (element.style?.textAlign === 'right') options.alignment = AlignmentType.RIGHT
@@ -130,7 +149,25 @@ export async function downloadDocumentWord(title, content) {
     new Paragraph({ text: title || 'VoiceDocs document', heading: HeadingLevel.TITLE }),
     ...htmlToWordParagraphs(html),
   ]
-  const wordDocument = new Document({ sections: [{ children }] })
+  const wordDocument = new Document({
+    numbering: {
+      config: [{
+        reference: 'voicedocs-ordered-list',
+        levels: Array.from({ length: 9 }, (_, level) => ({
+          level,
+          format: LevelFormat.DECIMAL,
+          text: '%'.concat(level + 1, '.'),
+          alignment: AlignmentType.START,
+          style: {
+            paragraph: {
+              indent: { left: 720 + level * 360, hanging: 360 },
+            },
+          },
+        })),
+      }],
+    },
+    sections: [{ children }],
+  })
   const blob = await Packer.toBlob(wordDocument)
   if (!(blob instanceof Blob) || blob.size < 100 || !blob.type.includes('officedocument')) {
     throw new Error('The Word document could not be generated correctly.')
