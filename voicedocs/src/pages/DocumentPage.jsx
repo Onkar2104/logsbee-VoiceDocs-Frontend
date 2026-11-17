@@ -90,7 +90,6 @@ export default function DocumentPage() {
       } catch (versionError) {
         console.warn('Could not load formatted document versions.', versionError)
         setVersions([])
-        setActiveVersionId(null)
         setSelectedVersionId(null)
         setFormattedContent('')
       }
