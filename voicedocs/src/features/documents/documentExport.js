@@ -1,14 +1,3 @@
-import html2pdf from 'html2pdf.js'
-import {
-  AlignmentType,
-  Document,
-  HeadingLevel,
-  LevelFormat,
-  Packer,
-  Paragraph,
-  TextRun,
-} from 'docx'
-
 function escapeHtml(value) {
   return String(value || '').replace(/[&<>"']/g, (character) => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
@@ -22,167 +11,54 @@ function normalizeContent(content) {
 }
 
 function safeFileName(title) {
-  return (title || 'VoiceDocs document')
-    .replace(/[<>:"/\\|?*]/g, '-')
-    .split('')
-    .map((character) => {
-      const code = character.charCodeAt(0)
-      return code < 32 || code === 127 ? '-' : character
+  return (title || 'VoiceDocs document').replace(/[<>:"/\\|?*]/g, '-').replace(/[\u0000-\u001f\u007f]/g, '-').replace(/\s+/g, ' ').trim().slice(0, 120) || 'VoiceDocs document'
+}
+
+function sanitizePrintHtml(content) {
+  const parsed = new DOMParser().parseFromString(normalizeContent(content), 'text/html')
+  parsed.querySelectorAll('script,style,iframe,object,embed,svg,math,form,input,button,textarea,select').forEach((node) => node.remove())
+  parsed.body.querySelectorAll('*').forEach((element) => {
+    Array.from(element.attributes).forEach((attribute) => {
+      const name = attribute.name.toLowerCase()
+      const value = attribute.value.trim()
+      if (name.startsWith('on') || name === 'srcdoc') element.removeAttribute(attribute.name)
+      if (name === 'href' && !/^(https?:|mailto:|#)/i.test(value)) element.removeAttribute(attribute.name)
+      if (name === 'src' && !/^(https?:|data:image\/(png|jpeg|webp);base64,)/i.test(value)) element.removeAttribute(attribute.name)
     })
-    .join('')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, 120) || 'VoiceDocs document'
-}
-
-function buildExportHtml(title, content) {
-  return '<!doctype html><html><head><meta charset="utf-8"><title>' + escapeHtml(title) + '</title>' +
-    '<style>body{font-family:Arial,sans-serif;color:#202124;font-size:11pt;line-height:1.6}h1{font-size:22pt;margin:0 0 22pt}h2{font-size:16pt;margin-top:18pt}p{margin:0 0 9pt}img{max-width:100%;height:auto}table{width:100%;border-collapse:collapse}td,th{border:1px solid #cbd5e1;padding:6px}blockquote{border-left:3px solid #94a3b8;margin-left:0;padding-left:12px;color:#475569}a{color:#1d4ed8;text-decoration:underline}</style>' +
-    '</head><body><h1>' + escapeHtml(title) + '</h1>' + normalizeContent(content) + '</body></html>'
-}
-
-function textRunsFromNode(node, marks = {}) {
-  if (node.nodeType === Node.TEXT_NODE) {
-    return node.nodeValue ? [new TextRun({ text: node.nodeValue, ...marks })] : []
-  }
-
-  if (node.nodeType !== Node.ELEMENT_NODE) return []
-
-  const tag = node.tagName.toLowerCase()
-  if (tag === 'br') return [new TextRun({ text: '\n', ...marks })]
-  if (tag === 'img') {
-    const alt = node.getAttribute('alt')
-    return alt ? [new TextRun({ text: '[Image: ' + alt + ']', italics: true })] : []
-  }
-
-  const nextMarks = {
-    ...marks,
-    ...(tag === 'strong' || tag === 'b' ? { bold: true } : {}),
-    ...(tag === 'em' || tag === 'i' ? { italics: true } : {}),
-    ...(tag === 'u' ? { underline: {} } : {}),
-    ...(tag === 's' || tag === 'del' ? { strike: true } : {}),
-    ...(tag === 'code' ? { font: 'Consolas' } : {}),
-  }
-
-  return Array.from(node.childNodes).flatMap((child) => textRunsFromNode(child, nextMarks))
-}
-
-function paragraphFromElement(element) {
-  const tag = element.tagName.toLowerCase()
-  const runs = Array.from(element.childNodes).flatMap((node) => textRunsFromNode(node))
-  const options = { children: runs.length ? runs : [new TextRun(' ')] }
-
-  if (/^h[1-6]$/.test(tag)) {
-    const level = Number(tag.slice(1))
-    options.heading = [HeadingLevel.HEADING_1, HeadingLevel.HEADING_2, HeadingLevel.HEADING_3,
-      HeadingLevel.HEADING_4, HeadingLevel.HEADING_5, HeadingLevel.HEADING_6][level - 1]
-  }
-
-  if (tag === 'li') {
-    const list = element.closest('ol,ul')
-    const nestingLevel = Math.max(0, Math.min(8, (() => {
-      let depth = 0
-      let parent = element.parentElement
-      while (parent && parent !== element.ownerDocument.body) {
-        if (parent.matches?.('ol,ul')) depth += 1
-        parent = parent.parentElement
-      }
-      return depth - 1
-    })()))
-
-    if (list?.tagName.toLowerCase() === 'ol') {
-      options.numbering = { reference: 'voicedocs-ordered-list', level: nestingLevel }
-    } else {
-      options.bullet = { indent: 360 + nestingLevel * 360, hanging: 180 }
-    }
-  }
-  if (tag === 'blockquote') options.indent = { left: 720 }
-  if (element.style?.textAlign === 'center') options.alignment = AlignmentType.CENTER
-  if (element.style?.textAlign === 'right') options.alignment = AlignmentType.RIGHT
-  return new Paragraph(options)
-}
-
-function htmlToWordParagraphs(html) {
-  const parsed = new DOMParser().parseFromString(html, 'text/html')
-  const body = parsed.body
-  const blocks = Array.from(body.querySelectorAll('h1,h2,h3,h4,h5,h6,p,li,blockquote,pre'))
-  const topLevelBlocks = blocks.filter((element) => !element.parentElement.closest('li,blockquote,pre'))
-  const paragraphs = topLevelBlocks.map((element) => paragraphFromElement(element))
-
-  body.querySelectorAll('table tr').forEach((row) => {
-    const cells = Array.from(row.querySelectorAll('th,td')).map((cell) => cell.textContent.trim())
-    if (cells.length) paragraphs.push(new Paragraph({ children: [new TextRun(cells.join('   |   '))] }))
   })
-
-  if (!paragraphs.length && body.textContent.trim()) {
-    paragraphs.push(new Paragraph({ text: body.textContent.trim() }))
-  }
-  return paragraphs
+  return parsed.body.innerHTML
 }
 
 export async function downloadDocumentPdf(title, content) {
-  const container = document.createElement('div')
-  // Only render the document body. A complete html/head/body document nested
-  // inside this div is invalid markup and can make html2canvas capture blank.
-  container.innerHTML = normalizeContent(content)
-  container.style.cssText = 'position:fixed;left:0;top:0;width:720px;padding:36px;background:#fff;color:#202124;font-family:Arial,sans-serif;font-size:11pt;line-height:1.6;z-index:2147483647;'
-  const style = document.createElement('style')
-  style.textContent = 'h1{font-size:22pt;margin:0 0 22pt}h2{font-size:16pt;margin-top:18pt}p{margin:0 0 9pt}ul,ol{padding-left:28px;margin:8pt 0 14pt}li{display:list-item;margin:3pt 0}img{max-width:100%;height:auto}table{width:100%;border-collapse:collapse}td,th{border:1px solid #cbd5e1;padding:6px}blockquote{border-left:3px solid #94a3b8;margin-left:0;padding-left:12px;color:#475569}a{color:#1d4ed8;text-decoration:underline}'
-  container.prepend(style)
-  document.body.appendChild(container)
-  try {
-    await html2pdf().set({
-      margin: [12, 14, 12, 14],
-      filename: safeFileName(title) + '.pdf',
-      image: { type: 'jpeg', quality: 0.96 },
-      html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-      pagebreak: { mode: ['css', 'legacy'] },
-    }).from(container).save()
-  } finally { container.remove() }
+  const printWindow = window.open('', '_blank')
+  if (!printWindow) throw new Error('The print window was blocked. Allow pop-ups for VoiceDocs and try again.')
+  const safeTitle = escapeHtml(title || 'VoiceDocs document')
+  const body = sanitizePrintHtml(content)
+  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${safeTitle}</title>
+<style>
+@page{size:A4;margin:18mm 16mm}*{box-sizing:border-box}html,body{background:#fff;color:#202124}
+body{font-family:Arial,"Noto Sans Devanagari","Nirmala UI",sans-serif;font-size:11pt;line-height:1.55;overflow-wrap:anywhere}
+h1{font-size:22pt;margin:0 0 22pt}h2{font-size:16pt;margin:18pt 0 9pt}h3,h4,h5,h6{margin:14pt 0 7pt}p{margin:0 0 9pt}
+ul,ol{padding-left:28px;margin:8pt 0 14pt}li{display:list-item;margin:3pt 0}img{max-width:100%;height:auto}
+table{width:100%;border-collapse:collapse}td,th{border:1px solid #cbd5e1;padding:6px}
+blockquote{border-left:3px solid #94a3b8;margin:10pt 0;padding-left:12px;color:#475569}a{color:#1d4ed8;text-decoration:underline}
+tr,img,blockquote{break-inside:avoid}
+</style></head><body><h1>${safeTitle}</h1>${body}
+<script>window.addEventListener('load',()=>{const imgs=[...document.images];Promise.all(imgs.map(i=>i.complete?Promise.resolve():new Promise(r=>{i.onload=r;i.onerror=r}))).then(()=>setTimeout(()=>{window.focus();window.print()},300))})</script>
+</body></html>`
+  printWindow.document.open()
+  printWindow.document.write(html)
+  printWindow.document.close()
 }
 
-export async function downloadDocumentWord(title, content) {
-  const html = normalizeContent(content)
-  const children = [
-    new Paragraph({ text: title || 'VoiceDocs document', heading: HeadingLevel.TITLE }),
-    ...htmlToWordParagraphs(html),
-  ]
-  const wordDocument = new Document({
-    numbering: {
-      config: [{
-        reference: 'voicedocs-ordered-list',
-        levels: Array.from({ length: 9 }, (_, level) => ({
-          level,
-          format: LevelFormat.DECIMAL,
-          text: '%'.concat(level + 1, '.'),
-          alignment: AlignmentType.START,
-          style: {
-            paragraph: {
-              indent: { left: 720 + level * 360, hanging: 360 },
-            },
-          },
-        })),
-      }],
-    },
-    sections: [{ children }],
-  })
-  const blob = await Packer.toBlob(wordDocument)
-  if (!(blob instanceof Blob) || blob.size < 100 || !blob.type.includes('officedocument')) {
-    throw new Error('The Word document could not be generated correctly.')
-  }
-
-  // Keep the object URL alive long enough for the browser to finish starting
-  // the download, especially for larger documents and slower machines.
+export function downloadBlobFile(blob, title) {
+  if (!(blob instanceof Blob) || blob.size < 100) throw new Error('The Word document could not be generated correctly.')
   const url = URL.createObjectURL(blob)
   const anchor = document.createElement('a')
   anchor.href = url
-  anchor.download = safeFileName(title) + '.docx'
+  anchor.download = safeFileName(title).toLowerCase().endsWith('.docx') ? safeFileName(title) : safeFileName(title) + '.docx'
   anchor.style.display = 'none'
   document.body.appendChild(anchor)
   anchor.click()
-  window.setTimeout(() => {
-    anchor.remove()
-    URL.revokeObjectURL(url)
-  }, 60000)
+  window.setTimeout(() => { anchor.remove(); URL.revokeObjectURL(url) }, 60000)
 }
