@@ -529,13 +529,9 @@ export default function DocumentPage() {
                   <option value="legal">Legal Document</option>
                 </select>
                 {formattingMode === 'legal' && (
+                  <>
+                  <p className="legal-jurisdiction-note">Jurisdiction: India</p>
                   <div className="legal-document-selectors">
-                    <div>
-                      <label htmlFor="legal-jurisdiction">Jurisdiction</label>
-                      <select id="legal-jurisdiction" value={jurisdiction || ''} onChange={(event) => setJurisdiction(event.target.value)}>
-                        {legalCatalog.jurisdictions.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
-                      </select>
-                    </div>
                     <div>
                       <label htmlFor="legal-category">Legal Category</label>
                       <select id="legal-category" value={legalCategory} disabled={isLegalCatalogLoading} onChange={(event) => { setLegalCategory(event.target.value); setLegalDocumentType('') }}>
@@ -551,6 +547,7 @@ export default function DocumentPage() {
                       </select>
                     </div>
                   </div>
+                  </>
                 )}
               </div>
               {formattingMode === 'legal' && <p className="legal-review-note">Review the formatted document with a qualified legal professional before use.</p>}
