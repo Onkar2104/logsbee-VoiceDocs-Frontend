@@ -279,7 +279,8 @@ export default function DocumentPage() {
     if (!versionId || versionId === activeVersionId) return
     setError('')
     try {
-      await setActiveDocumentVersion(document.id, versionId)
+      // Read-only shared users may browse versions without changing the document's active version.
+      if (canEdit) await setActiveDocumentVersion(document.id, versionId)
       const selected = await fetchDocumentVersion(document.id, versionId)
       setActiveVersionId(versionId)
       setFormattedContent(selected.content_html || '')
