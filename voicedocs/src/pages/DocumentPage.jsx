@@ -443,7 +443,7 @@ export default function DocumentPage() {
           </div>
           {error && <p className="alert alert-error" role="alert">{error}</p>}
           {notice && <p className="alert alert-success" role="status">{notice}</p>}
-          {canManage ? (
+          {canEdit ? (
             <form onSubmit={handleSave} className="document-editor-form">
               <label htmlFor="edit-document-title">Document title <span className="required-label">*</span></label>
               <input id="edit-document-title" value={title} onChange={(event) => setTitle(event.target.value)} maxLength={255} required placeholder="Enter a document title" />
