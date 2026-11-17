@@ -104,15 +104,20 @@ function htmlToWordParagraphs(html) {
 
 export async function downloadDocumentPdf(title, content) {
   const container = document.createElement('div')
-  container.innerHTML = buildExportHtml(title, content)
-  container.style.cssText = 'position:fixed;left:0;top:0;width:720px;padding:36px;background:#fff;z-index:2147483647;pointer-events:none;'
+  // Only render the document body. A complete html/head/body document nested
+  // inside this div is invalid markup and can make html2canvas capture blank.
+  container.innerHTML = normalizeContent(content)
+  container.style.cssText = 'position:fixed;left:0;top:0;width:720px;padding:36px;background:#fff;color:#202124;font-family:Arial,sans-serif;font-size:11pt;line-height:1.6;z-index:2147483647;'
+  const style = document.createElement('style')
+  style.textContent = 'h1{font-size:22pt;margin:0 0 22pt}h2{font-size:16pt;margin-top:18pt}p{margin:0 0 9pt}ul,ol{padding-left:28px;margin:8pt 0 14pt}li{display:list-item;margin:3pt 0}img{max-width:100%;height:auto}table{width:100%;border-collapse:collapse}td,th{border:1px solid #cbd5e1;padding:6px}blockquote{border-left:3px solid #94a3b8;margin-left:0;padding-left:12px;color:#475569}a{color:#1d4ed8;text-decoration:underline}'
+  container.prepend(style)
   document.body.appendChild(container)
   try {
     await html2pdf().set({
       margin: [12, 14, 12, 14],
       filename: safeFileName(title) + '.pdf',
       image: { type: 'jpeg', quality: 0.96 },
-      html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+      html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
       pagebreak: { mode: ['css', 'legacy'] },
     }).from(container).save()
