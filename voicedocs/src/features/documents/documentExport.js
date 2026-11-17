@@ -80,7 +80,6 @@ function paragraphFromElement(element) {
 
   if (tag === 'li') {
     const list = element.closest('ol,ul')
-    const listLevel = Math.max(0, Math.min(8, Array.from(element.parentElement?.parentElement?.querySelectorAll(':scope > ol, :scope > ul') || []).length))
     const nestingLevel = Math.max(0, Math.min(8, (() => {
       let depth = 0
       let parent = element.parentElement
