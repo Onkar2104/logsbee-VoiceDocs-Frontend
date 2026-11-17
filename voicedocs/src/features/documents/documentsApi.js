@@ -44,8 +44,8 @@ export async function fetchSharingSummary() {
 
 export async function formatDocument(documentId) {
   // Formatting may take longer than the normal 15-second API timeout.
-  // Keep the request open long enough for the backend's 90-second model timeout.
-  const response = await api.post(`/documents/${documentId}/format`, null, { timeout: 120000 })
+  // Keep the request open long enough for the backend's longer model timeout and retry window.
+  const response = await api.post(`/documents/${documentId}/format`, null, { timeout: 240000 })
   return response.data
 }
 
