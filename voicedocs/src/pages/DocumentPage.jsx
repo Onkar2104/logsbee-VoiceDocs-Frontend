@@ -27,6 +27,7 @@ export default function DocumentPage() {
   const [formattedContent, setFormattedContent] = useState('')
   const [versions, setVersions] = useState([])
   const [activeVersionId, setActiveVersionId] = useState(null)
+  const [selectedVersionId, setSelectedVersionId] = useState(null)
   const [activeTab, setActiveTab] = useState('original')
   const [isFormatting, setIsFormatting] = useState(false)
   const [isSavingVersion, setIsSavingVersion] = useState(false)
@@ -68,6 +69,7 @@ export default function DocumentPage() {
         setFormattedContent('')
         setVersions([])
         setActiveVersionId(null)
+        setSelectedVersionId(null)
         setActiveTab('original')
         return
       }
@@ -81,6 +83,7 @@ export default function DocumentPage() {
         const versionData = await fetchDocumentVersions(result.id)
         setVersions(versionData.items || [])
         setActiveVersionId(versionData.active_version_id || null)
+        setSelectedVersionId(versionData.active_version_id || null)
         if (versionData.active_version_id) {
           const savedVersion = await fetchDocumentVersion(result.id, versionData.active_version_id)
           setFormattedContent(savedVersion.content_html || '')
@@ -91,6 +94,7 @@ export default function DocumentPage() {
         console.warn('Could not load formatted document versions.', versionError)
         setVersions([])
         setActiveVersionId(null)
+        setSelectedVersionId(null)
         setFormattedContent('')
       }
     } catch (requestError) {
@@ -158,12 +162,14 @@ export default function DocumentPage() {
     setError('')
     setNotice('')
     try {
-      if (!isNewDocument && activeTab === 'formatted' && activeVersionId) {
+      if (!isNewDocument && activeTab === 'formatted' && selectedVersionId) {
         const updatedOriginal = await updateDocument(documentId, { title: title.trim(), content })
         setDocument(updatedOriginal)
         const audioBackupPending = await savePendingRecordings(updatedOriginal.id)
-        const savedVersion = await replaceDocumentVersion(documentId, activeVersionId, formattedContent)
+        const savedVersion = await replaceDocumentVersion(documentId, selectedVersionId, formattedContent)
         setFormattedContent(savedVersion.content_html || formattedContent)
+        setActiveVersionId(savedVersion.id)
+        setSelectedVersionId(savedVersion.id)
         const versionData = await fetchDocumentVersions(documentId)
         setVersions(versionData.items || [])
         setNotice(savedVersion.backup_status === 'backed_up' && !audioBackupPending
@@ -209,6 +215,7 @@ export default function DocumentPage() {
       const result = await formatDocument(document.id)
       setFormattedContent(result.content_html || '')
       setActiveVersionId(result.id)
+      setSelectedVersionId(result.id)
       const versionData = await fetchDocumentVersions(document.id)
       setVersions(versionData.items || [])
       setActiveTab('formatted')
@@ -233,6 +240,7 @@ export default function DocumentPage() {
       const audioBackupPending = await savePendingRecordings(updatedOriginal.id)
       const result = await createDocumentVersion(document.id, formattedContent)
       setActiveVersionId(result.id)
+      setSelectedVersionId(result.id)
       setFormattedContent(result.content_html || formattedContent)
       const versionData = await fetchDocumentVersions(document.id)
       setVersions(versionData.items || [])
@@ -247,12 +255,12 @@ export default function DocumentPage() {
   }
 
   async function handleBackupFormattedVersion() {
-    if (!document?.id || !activeVersionId) return
+    if (!document?.id || !selectedVersionId) return
     setIsSavingVersion(true)
     setError('')
     setNotice('')
     try {
-      await backupDocumentVersion(document.id, activeVersionId)
+      await backupDocumentVersion(document.id, selectedVersionId)
       const versionData = await fetchDocumentVersions(document.id)
       setVersions(versionData.items || [])
       setNotice('Formatted version backed up to Google Drive. VoiceDocs database copy is retained.')
@@ -264,11 +272,11 @@ export default function DocumentPage() {
   }
 
   async function handleViewVersion(versionId) {
-    if (!versionId || versionId === activeVersionId) return
+    if (!versionId || versionId === selectedVersionId) return
     setError('')
     try {
       const selected = await fetchDocumentVersion(document.id, versionId)
-      setActiveVersionId(versionId)
+      setSelectedVersionId(versionId)
       setFormattedContent(selected.content_html || '')
     } catch (loadError) {
       setError(loadError.response?.data?.detail || 'Could not load that formatted version.')
@@ -470,11 +478,11 @@ export default function DocumentPage() {
                 <>
                   <div className="formatted-version-toolbar">
                     <label htmlFor="formatted-version-select"><History size={15} /> Saved versions</label>
-                    <select id="formatted-version-select" value={activeVersionId || ''} onChange={(event) => void handleSelectVersion(event.target.value)}>
+                    <select id="formatted-version-select" value={selectedVersionId || ''} onChange={(event) => void handleSelectVersion(event.target.value)}>
                       {versions.map((version) => <option key={version.id} value={version.id}>Version {version.version_number} · {formatDate(version.created_at)}</option>)}
                     </select>
                     <button className="secondary-button" type="button" onClick={handleFormatDocument} disabled={isFormatting || !content.trim()}><Sparkles size={15} /> {isFormatting ? 'AI is formatting your document…' : 'Format again'}</button>
-                    {canManage && versions.find((version) => version.id === activeVersionId)?.backup_status !== 'backed_up' && (
+                    {canManage && versions.find((version) => version.id === selectedVersionId)?.backup_status !== 'backed_up' && (
                       <button className="secondary-button" type="button" onClick={handleBackupFormattedVersion} disabled={isSavingVersion}>
                         {isSavingVersion ? 'Backing up…' : 'Back up formatted version'}
                       </button>
@@ -485,7 +493,7 @@ export default function DocumentPage() {
                     <span className="editor-hint">The original transcript remains unchanged.</span>
                     <div className="document-version-actions">
                       <button className="secondary-button" type="button" onClick={handleSaveAsNewVersion} disabled={isSavingVersion || !formattedContent.trim()}>{isSavingVersion ? 'Saving…' : 'Save as new version'}</button>
-                      <button className="primary-button save-button" type="submit" disabled={isSaving || !title.trim() || !activeVersionId}><Save size={16} /> {isSaving ? 'Saving…' : 'Replace current version'}</button>
+                      <button className="primary-button save-button" type="submit" disabled={isSaving || !title.trim() || !selectedVersionId}><Save size={16} /> {isSaving ? 'Saving…' : 'Replace current version'}</button>
                     </div>
                   </div>
                 </>
@@ -507,7 +515,7 @@ export default function DocumentPage() {
                   {versions.length > 0 && (
                     <div className="formatted-version-toolbar">
                       <label htmlFor="readonly-version-select"><History size={15} /> Saved versions</label>
-                      <select id="readonly-version-select" value={activeVersionId || ''} onChange={(event) => void handleViewVersion(event.target.value)}>
+                      <select id="readonly-version-select" value={selectedVersionId || ''} onChange={(event) => void handleViewVersion(event.target.value)}>
                         {versions.map((version) => <option key={version.id} value={version.id}>Version {version.version_number} · {formatDate(version.created_at)}</option>)}
                       </select>
                     </div>
