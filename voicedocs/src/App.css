@@ -1191,3 +1191,24 @@
   .legal-document-selectors { grid-template-columns: 1fr; }
   .document-editor-card > .editor-toolbar { align-items: flex-start; }
 }
+
+.document-sticky-actions {
+  position: sticky;
+  top: 62px;
+  z-index: 25;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 -4px 18px;
+  padding: 10px 4px;
+  border-bottom: 1px solid #edf0f5;
+  background: rgba(255,255,255,.97);
+}
+.rich-text-toolbar { top: 116px; }
+@media (max-width: 640px) {
+  .document-sticky-actions { top: 58px; justify-content: stretch; }
+  .document-sticky-actions > button { flex: 1 1 100%; }
+  .rich-text-toolbar { top: 168px; }
+}
