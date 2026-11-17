@@ -5,8 +5,8 @@ import { useAuth } from '../context/useAuth'
 import VoiceDictation from '../components/VoiceDictation'
 import RichTextEditor from '../components/RichTextEditor'
 import WorkspaceSidebar from '../components/WorkspaceSidebar'
-import { downloadDocumentPdf, downloadDocumentWord } from '../features/documents/documentExport'
-import { backupDocument, createDocument, deleteDocument, fetchDocument, requestDocumentEditAccess, updateDocument, formatDocument, fetchDocumentVersions, fetchDocumentVersion, replaceDocumentVersion, createDocumentVersion, backupDocumentVersion } from '../features/documents/documentsApi'
+import { downloadDocumentPdf, downloadBlobFile } from '../features/documents/documentExport'
+import { backupDocument, createDocument, deleteDocument, fetchDocument, requestDocumentEditAccess, updateDocument, formatDocument, fetchDocumentVersions, fetchDocumentVersion, replaceDocumentVersion, createDocumentVersion, backupDocumentVersion, exportDocumentDocx } from '../features/documents/documentsApi'
 import { fetchUserPreferences } from '../features/current-user/preferencesApi'
 import { uploadBrowserRecording } from '../features/recordings/recordingsApi'
 
@@ -344,7 +344,11 @@ export default function DocumentPage() {
       if (format === 'pdf') {
         await downloadDocumentPdf(exportTitle, exportContent)
       } else {
-        await downloadDocumentWord(exportTitle, exportContent)
+        if (!document?.id || document.id === 'new') {
+          throw new Error('Save the document before downloading it as Word.')
+        }
+        const blob = await exportDocumentDocx(document.id, exportContent)
+        downloadBlobFile(blob, exportTitle)
       }
       setNotice(`Your document was exported as ${format === 'pdf' ? 'PDF' : 'Word'}.`)
     } catch (downloadError) {
