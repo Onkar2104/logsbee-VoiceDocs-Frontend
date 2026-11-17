@@ -45,7 +45,7 @@ export default function DocumentPage() {
   const isAccountAdmin = user?.role?.name?.trim().toLowerCase() === 'admin'
   // A newly opened draft belongs to the current user and must be editable
   // before it has a persisted owner_user_id from the API.
-  const canManage = Boolean(isNewDocument || (document && (isAccountAdmin || document.owner_user_id === user?.id)))
+  const canManage = Boolean(isNewDocument || document?.can_edit || (document && (isAccountAdmin || document.owner_user_id === user?.id)))
 
   const loadDocument = useCallback(async () => {
     setIsLoading(true)
