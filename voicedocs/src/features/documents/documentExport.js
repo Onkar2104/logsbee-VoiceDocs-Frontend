@@ -105,7 +105,7 @@ function htmlToWordParagraphs(html) {
 export async function downloadDocumentPdf(title, content) {
   const container = document.createElement('div')
   container.innerHTML = buildExportHtml(title, content)
-  container.style.cssText = 'position:fixed;left:-10000px;top:0;width:720px;padding:36px;background:#fff;'
+  container.style.cssText = 'position:fixed;left:0;top:0;width:720px;padding:36px;background:#fff;z-index:2147483647;pointer-events:none;'
   document.body.appendChild(container)
   try {
     await html2pdf().set({
@@ -127,12 +127,21 @@ export async function downloadDocumentWord(title, content) {
   ]
   const wordDocument = new Document({ sections: [{ children }] })
   const blob = await Packer.toBlob(wordDocument)
+  if (!(blob instanceof Blob) || blob.size < 100 || !blob.type.includes('officedocument')) {
+    throw new Error('The Word document could not be generated correctly.')
+  }
+
+  // Keep the object URL alive long enough for the browser to finish starting
+  // the download, especially for larger documents and slower machines.
   const url = URL.createObjectURL(blob)
   const anchor = document.createElement('a')
   anchor.href = url
   anchor.download = safeFileName(title) + '.docx'
+  anchor.style.display = 'none'
   document.body.appendChild(anchor)
   anchor.click()
-  anchor.remove()
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000)
+  window.setTimeout(() => {
+    anchor.remove()
+    URL.revokeObjectURL(url)
+  }, 60000)
 }
