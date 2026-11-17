@@ -9,6 +9,7 @@ import { downloadDocumentPdf, downloadBlobFile } from '../features/documents/doc
 import { backupDocument, createDocument, deleteDocument, fetchDocument, requestDocumentEditAccess, updateDocument, formatDocument, fetchDocumentVersions, fetchDocumentVersion, replaceDocumentVersion, createDocumentVersion, backupDocumentVersion, exportDocumentDocx } from '../features/documents/documentsApi'
 import { fetchUserPreferences } from '../features/current-user/preferencesApi'
 import { uploadBrowserRecording } from '../features/recordings/recordingsApi'
+import { fetchLegalDocumentCatalog } from '../features/documents/documentsApi'
 
 function formatDate(value) {
   if (!value) return 'Not available'
@@ -40,7 +41,22 @@ export default function DocumentPage() {
   const [downloadFormat, setDownloadFormat] = useState('')
   const [pendingRecordings, setPendingRecordings] = useState([])
   const [isBackingUp, setIsBackingUp] = useState(false)
+  const [legalCatalog, setLegalCatalog] = useState({ jurisdictions: [], categories: [] })
+  const [isLegalCatalogLoading, setIsLegalCatalogLoading] = useState(false)
+  const [formattingMode, setFormattingMode] = useState('general')
+  const [jurisdiction, setJurisdiction] = useState('IN')
+  const [legalCategory, setLegalCategory] = useState('')
+  const [legalDocumentType, setLegalDocumentType] = useState('')
   const contentTextareaRef = useRef(null)
+
+  const selectedLegalCategory = legalCatalog.categories.find((item) => item.id === legalCategory)
+  const legalMetadata = {
+    formatting_mode: formattingMode,
+    jurisdiction: formattingMode === 'legal' ? jurisdiction : null,
+    legal_category: formattingMode === 'legal' ? legalCategory : null,
+    document_type: formattingMode === 'legal' ? legalDocumentType : null,
+  }
+  const legalSelectionIsValid = formattingMode === 'general' || Boolean(jurisdiction && legalCategory && legalDocumentType)
 
   const isAccountAdmin = user?.role?.name?.trim().toLowerCase() === 'admin'
   // A newly opened draft belongs to the current user and must be editable
@@ -69,6 +85,10 @@ export default function DocumentPage() {
         setVersions([])
         setSelectedVersionId(null)
         setActiveTab('original')
+        setFormattingMode('general')
+        setJurisdiction('IN')
+        setLegalCategory('')
+        setLegalDocumentType('')
         return
       }
 
@@ -76,6 +96,10 @@ export default function DocumentPage() {
       setDocument(result)
       setTitle(result.title || '')
       setContent(result.content || '')
+      setFormattingMode(result.formatting_mode || 'general')
+      setJurisdiction(result.jurisdiction || 'IN')
+      setLegalCategory(result.legal_category || '')
+      setLegalDocumentType(result.document_type || '')
       setActiveTab('original')
       try {
         const versionData = await fetchDocumentVersions(result.id)
@@ -99,6 +123,18 @@ export default function DocumentPage() {
       setIsLoading(false)
     }
   }, [documentId, isNewDocument, user])
+
+  useEffect(() => {
+    let cancelled = false
+    setIsLegalCatalogLoading(true)
+    fetchLegalDocumentCatalog()
+      .then((catalog) => { if (!cancelled) setLegalCatalog(catalog) })
+      .catch((catalogError) => {
+        if (!cancelled) setError(catalogError.response?.data?.detail || 'Legal document options could not be loaded.')
+      })
+      .finally(() => { if (!cancelled) setIsLegalCatalogLoading(false) })
+    return () => { cancelled = true }
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -159,7 +195,7 @@ export default function DocumentPage() {
     setNotice('')
     try {
       if (!isNewDocument && activeTab === 'formatted' && selectedVersionId) {
-        const updatedOriginal = await updateDocument(documentId, { title: title.trim(), content })
+        const updatedOriginal = await updateDocument(documentId, { title: title.trim(), content, ...legalMetadata })
         setDocument(updatedOriginal)
         const audioBackupPending = await savePendingRecordings(updatedOriginal.id)
         const savedVersion = await replaceDocumentVersion(documentId, selectedVersionId, formattedContent)
@@ -173,8 +209,8 @@ export default function DocumentPage() {
         return
       }
       const updated = isNewDocument
-        ? await createDocument({ title: title.trim(), content })
-        : await updateDocument(documentId, { title: title.trim(), content })
+        ? await createDocument({ title: title.trim(), content, ...legalMetadata })
+        : await updateDocument(documentId, { title: title.trim(), content, ...legalMetadata })
       setDocument(updated)
       setTitle(updated.title)
       setContent(updated.content)
@@ -203,7 +239,8 @@ export default function DocumentPage() {
     setError('')
     setNotice('')
     try {
-      const savedOriginal = await updateDocument(document.id, { title: title.trim(), content })
+      if (!legalSelectionIsValid) throw new Error('Select a legal category and document type before formatting.')
+      const savedOriginal = await updateDocument(document.id, { title: title.trim(), content, ...legalMetadata })
       setDocument(savedOriginal)
       setContent(savedOriginal.content || content)
       const audioBackupPending = await savePendingRecordings(savedOriginal.id)
@@ -229,7 +266,7 @@ export default function DocumentPage() {
     setError('')
     setNotice('')
     try {
-      const updatedOriginal = await updateDocument(document.id, { title: title.trim(), content })
+      const updatedOriginal = await updateDocument(document.id, { title: title.trim(), content, ...legalMetadata })
       setDocument(updatedOriginal)
       const audioBackupPending = await savePendingRecordings(updatedOriginal.id)
       const result = await createDocumentVersion(document.id, formattedContent)
@@ -450,6 +487,52 @@ export default function DocumentPage() {
           {notice && <p className="alert alert-success" role="status">{notice}</p>}
           {canEdit ? (
             <form onSubmit={handleSave} className="document-editor-form">
+              <div className="document-format-mode-panel">
+                <label htmlFor="document-format-mode">Formatting mode</label>
+                <select
+                  id="document-format-mode"
+                  value={formattingMode}
+                  onChange={(event) => {
+                    const nextMode = event.target.value
+                    setFormattingMode(nextMode)
+                    if (nextMode === 'general') {
+                      setJurisdiction(null)
+                      setLegalCategory('')
+                      setLegalDocumentType('')
+                    } else {
+                      setJurisdiction('IN')
+                    }
+                  }}
+                >
+                  <option value="general">General Document</option>
+                  <option value="legal">Legal Document</option>
+                </select>
+                {formattingMode === 'legal' && (
+                  <div className="legal-document-selectors">
+                    <div>
+                      <label htmlFor="legal-jurisdiction">Jurisdiction</label>
+                      <select id="legal-jurisdiction" value={jurisdiction || ''} onChange={(event) => setJurisdiction(event.target.value)}>
+                        {legalCatalog.jurisdictions.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label htmlFor="legal-category">Legal Category</label>
+                      <select id="legal-category" value={legalCategory} disabled={isLegalCatalogLoading} onChange={(event) => { setLegalCategory(event.target.value); setLegalDocumentType('') }}>
+                        <option value="">Select legal category</option>
+                        {legalCatalog.categories.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label htmlFor="legal-document-type">Document Type</label>
+                      <select id="legal-document-type" value={legalDocumentType} disabled={!selectedLegalCategory} onChange={(event) => setLegalDocumentType(event.target.value)}>
+                        <option value="">Select document type</option>
+                        {(selectedLegalCategory?.document_types || []).map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                )}
+              </div>
+              {formattingMode === 'legal' && <p className="legal-review-note">Review the formatted document with a qualified legal professional before use.</p>}
               <label htmlFor="edit-document-title">Document title <span className="required-label">*</span></label>
               <input id="edit-document-title" value={title} onChange={(event) => setTitle(event.target.value)} maxLength={255} required placeholder="Enter a document title" />
               <label htmlFor="edit-document-content">Content</label>
