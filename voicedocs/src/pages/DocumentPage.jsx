@@ -284,7 +284,7 @@ export default function DocumentPage() {
   }
 
   async function handleSelectVersion(versionId) {
-    if (!versionId || versionId === activeVersionId) return
+    if (!versionId || versionId === selectedVersionId) return
     setError('')
     try {
       // Browsing history is local to this editor; saving a version changes the active version.
