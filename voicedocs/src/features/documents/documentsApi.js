@@ -77,3 +77,15 @@ export async function createDocumentVersion(documentId, contentHtml) {
   const response = await api.post(`/documents/${documentId}/versions`, { content_html: contentHtml })
   return response.data
 }
+export async function exportDocumentDocx(documentId, contentHtml) {
+  const response = await api.post(
+    `/documents/${documentId}/export/docx`,
+    { content_html: contentHtml },
+    {
+      responseType: 'blob',
+      timeout: 60000,
+      headers: { Accept: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' },
+    },
+  )
+  return response.data
+}
