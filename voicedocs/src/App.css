@@ -1212,3 +1212,9 @@
   .document-sticky-actions > button { flex: 1 1 100%; }
   .rich-text-toolbar { top: 168px; }
 }
+
+.legal-jurisdiction-note {
+  margin: 12px 0 0;
+  color: #667085;
+  font-size: 12px;
+}
