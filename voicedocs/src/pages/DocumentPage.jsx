@@ -6,10 +6,9 @@ import VoiceDictation from '../components/VoiceDictation'
 import RichTextEditor from '../components/RichTextEditor'
 import WorkspaceSidebar from '../components/WorkspaceSidebar'
 import { downloadDocumentPdf, downloadBlobFile } from '../features/documents/documentExport'
-import { backupDocument, createDocument, deleteDocument, fetchDocument, requestDocumentEditAccess, updateDocument, formatDocument, fetchDocumentVersions, fetchDocumentVersion, replaceDocumentVersion, createDocumentVersion, backupDocumentVersion, exportDocumentDocx } from '../features/documents/documentsApi'
+import { backupDocument, createDocument, deleteDocument, fetchDocument, requestDocumentEditAccess, updateDocument, formatDocument, fetchDocumentVersions, fetchDocumentVersion, replaceDocumentVersion, createDocumentVersion, backupDocumentVersion, exportDocumentDocx, fetchLegalDocumentCatalog } from '../features/documents/documentsApi'
 import { fetchUserPreferences } from '../features/current-user/preferencesApi'
 import { uploadBrowserRecording } from '../features/recordings/recordingsApi'
-import { fetchLegalDocumentCatalog } from '../features/documents/documentsApi'
 
 function formatDate(value) {
   if (!value) return 'Not available'
@@ -188,6 +187,10 @@ export default function DocumentPage() {
     event.preventDefault()
     if (!title.trim()) {
       setError('Document title cannot be empty.')
+      return
+    }
+    if (!legalSelectionIsValid) {
+      setError('Select a legal category and document type before saving.')
       return
     }
     setIsSaving(true)
@@ -487,6 +490,24 @@ export default function DocumentPage() {
           {notice && <p className="alert alert-success" role="status">{notice}</p>}
           {canEdit ? (
             <form onSubmit={handleSave} className="document-editor-form">
+              <div className="document-sticky-actions">
+                <button
+                  className="secondary-button"
+                  type="button"
+                  onClick={handleFormatDocument}
+                  disabled={isNewDocument || isFormatting || !content.trim() || !legalSelectionIsValid}
+                >
+                  <Sparkles size={16} /> {isFormatting ? 'Formatting…' : formattingMode === 'legal' ? 'Format Legal Document' : 'Format Document'}
+                </button>
+                <button className="primary-button save-button" type="submit" disabled={isSaving || !title.trim() || !legalSelectionIsValid}>
+                  <Save size={16} /> {isSaving ? 'Saving…' : activeTab === 'formatted' ? 'Save formatted version' : isNewDocument ? 'Create document' : 'Save document'}
+                </button>
+                {activeTab === 'formatted' && selectedVersionId && (
+                  <button className="secondary-button" type="button" onClick={handleSaveAsNewVersion} disabled={isSavingVersion || !formattedContent.trim()}>
+                    {isSavingVersion ? 'Saving version…' : 'Save as new version'}
+                  </button>
+                )}
+              </div>
               <div className="document-format-mode-panel">
                 <label htmlFor="document-format-mode">Formatting mode</label>
                 <select
@@ -548,10 +569,6 @@ export default function DocumentPage() {
                   <RichTextEditor editorRef={contentTextareaRef} value={content} onChange={setContent} />
                   <div className="editor-actions">
                     <span className="editor-hint">{isNewDocument ? 'A title is required to create this document.' : 'The original transcript is kept separately from formatted versions.'}</span>
-                    <div className="document-version-actions">
-                      {!isNewDocument && <button className="secondary-button" type="button" onClick={handleFormatDocument} disabled={isFormatting || !content.trim()}><Sparkles size={16} /> {isFormatting ? 'AI is formatting your document…' : 'Format Document'}</button>}
-                      <button className="primary-button save-button" type="submit" disabled={isSaving || !title.trim()}><Save size={16} /> {isSaving ? 'Saving…' : isNewDocument ? 'Create document' : 'Save original'}</button>
-                    </div>
                   </div>
                 </>
               ) : (
@@ -571,10 +588,6 @@ export default function DocumentPage() {
                   <RichTextEditor value={formattedContent} onChange={setFormattedContent} />
                   <div className="editor-actions">
                     <span className="editor-hint">The original transcript remains unchanged.</span>
-                    <div className="document-version-actions">
-                      <button className="secondary-button" type="button" onClick={handleSaveAsNewVersion} disabled={isSavingVersion || !formattedContent.trim()}>{isSavingVersion ? 'Saving…' : 'Save as new version'}</button>
-                      <button className="primary-button save-button" type="submit" disabled={isSaving || !title.trim() || !selectedVersionId}><Save size={16} /> {isSaving ? 'Saving…' : 'Replace current version'}</button>
-                    </div>
                   </div>
                 </>
               )}
