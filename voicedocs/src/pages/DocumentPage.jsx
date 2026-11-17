@@ -26,7 +26,6 @@ export default function DocumentPage() {
   const [content, setContent] = useState('')
   const [formattedContent, setFormattedContent] = useState('')
   const [versions, setVersions] = useState([])
-  const [activeVersionId, setActiveVersionId] = useState(null)
   const [selectedVersionId, setSelectedVersionId] = useState(null)
   const [activeTab, setActiveTab] = useState('original')
   const [isFormatting, setIsFormatting] = useState(false)
@@ -68,7 +67,6 @@ export default function DocumentPage() {
         setContent('')
         setFormattedContent('')
         setVersions([])
-        setActiveVersionId(null)
         setSelectedVersionId(null)
         setActiveTab('original')
         return
@@ -82,7 +80,6 @@ export default function DocumentPage() {
       try {
         const versionData = await fetchDocumentVersions(result.id)
         setVersions(versionData.items || [])
-        setActiveVersionId(versionData.active_version_id || null)
         setSelectedVersionId(versionData.active_version_id || null)
         if (versionData.active_version_id) {
           const savedVersion = await fetchDocumentVersion(result.id, versionData.active_version_id)
@@ -168,7 +165,6 @@ export default function DocumentPage() {
         const audioBackupPending = await savePendingRecordings(updatedOriginal.id)
         const savedVersion = await replaceDocumentVersion(documentId, selectedVersionId, formattedContent)
         setFormattedContent(savedVersion.content_html || formattedContent)
-        setActiveVersionId(savedVersion.id)
         setSelectedVersionId(savedVersion.id)
         const versionData = await fetchDocumentVersions(documentId)
         setVersions(versionData.items || [])
@@ -214,7 +210,6 @@ export default function DocumentPage() {
       const audioBackupPending = await savePendingRecordings(savedOriginal.id)
       const result = await formatDocument(document.id)
       setFormattedContent(result.content_html || '')
-      setActiveVersionId(result.id)
       setSelectedVersionId(result.id)
       const versionData = await fetchDocumentVersions(document.id)
       setVersions(versionData.items || [])
