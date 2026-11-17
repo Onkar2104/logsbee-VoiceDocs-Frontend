@@ -45,7 +45,8 @@ export default function DocumentPage() {
   const isAccountAdmin = user?.role?.name?.trim().toLowerCase() === 'admin'
   // A newly opened draft belongs to the current user and must be editable
   // before it has a persisted owner_user_id from the API.
-  const canManage = Boolean(isNewDocument || document?.can_edit || (document && (isAccountAdmin || document.owner_user_id === user?.id)))
+  const canManage = Boolean(isNewDocument || (document && (isAccountAdmin || document.owner_user_id === user?.id)))
+  const canEdit = Boolean(canManage || document?.can_edit)
 
   const loadDocument = useCallback(async () => {
     setIsLoading(true)
@@ -473,7 +474,7 @@ export default function DocumentPage() {
                       {versions.map((version) => <option key={version.id} value={version.id}>Version {version.version_number} · {formatDate(version.created_at)}</option>)}
                     </select>
                     <button className="secondary-button" type="button" onClick={handleFormatDocument} disabled={isFormatting || !content.trim()}><Sparkles size={15} /> {isFormatting ? 'AI is formatting your document…' : 'Format again'}</button>
-                    {versions.find((version) => version.id === activeVersionId)?.backup_status !== 'backed_up' && (
+                    {canManage && versions.find((version) => version.id === activeVersionId)?.backup_status !== 'backed_up' && (
                       <button className="secondary-button" type="button" onClick={handleBackupFormattedVersion} disabled={isSavingVersion}>
                         {isSavingVersion ? 'Backing up…' : 'Back up formatted version'}
                       </button>
