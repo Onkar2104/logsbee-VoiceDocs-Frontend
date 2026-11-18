@@ -112,6 +112,7 @@ export default function TrashPage() {
                 <div className="trash-item-copy">
                   <h3>{item.title}</h3>
                   <span><Clock3 size={13} /> Deleted {formatDate(item.deleted_at)}</span>
+                  {item.drive_cleanup_pending && <span className="trash-drive-pending">Google Drive cleanup pending — reconnect Drive, then retry permanent deletion</span>}
                 </div>
                 <div className="trash-item-actions">
                   <button className="secondary-button" type="button" onClick={() => void handleRestore(item)} disabled={busyId === item.id}>
