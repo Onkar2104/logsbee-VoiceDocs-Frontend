@@ -103,9 +103,10 @@ export default function DashboardPage() {
   const visibleDocuments = documents
 
   async function handleDelete(documentId) {
-    if (!window.confirm('Move this document to the deleted state?')) return
+    if (!window.confirm('Move this document to Trash? You can restore it later. Its Google Drive backups will be removed.')) return
     try {
-      await deleteDocument(documentId)
+      const result = await deleteDocument(documentId)
+      if (result.drive_cleanup_pending) setError('The document was moved to Trash, but some Google Drive backups could not be removed. Reconnect Google Drive and permanently delete the document from Trash to retry cleanup.')
       setDocuments((current) => current.filter((document) => document.id !== documentId))
       if (documents.length === 1 && page > 1) setPage((current) => current - 1)
       else await loadDocuments()
