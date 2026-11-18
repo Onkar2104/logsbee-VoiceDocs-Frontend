@@ -56,7 +56,14 @@ export default function TrashPage() {
     }
   }, [])
 
-  useEffect(() => { void loadTrash() }, [loadTrash])
+  useEffect(() => {
+    let cancelled = false
+    Promise.resolve().then(() => {
+      if (!cancelled) return loadTrash()
+      return undefined
+    })
+    return () => { cancelled = true }
+  }, [loadTrash])
 
   async function runAction(id, action, successMessage) {
     setBusyId(id)
