@@ -8,6 +8,7 @@ import RegisterPage from './pages/RegisterPage'
 import ProfilePage from './pages/ProfilePage'
 import DrivePage from './pages/DrivePage'
 import AudioPage from './pages/AudioPage'
+import TrashPage from './pages/TrashPage'
 import './App.css'
 
 function App() {
@@ -24,6 +25,7 @@ function App() {
           <Route path="/settings" element={<Navigate to="/profile" replace />} />
           <Route path="/drive" element={<ProtectedRoute><DrivePage /></ProtectedRoute>} />
           <Route path="/audio" element={<ProtectedRoute><AudioPage /></ProtectedRoute>} />
+          <Route path="/trash" element={<ProtectedRoute><TrashPage /></ProtectedRoute>} />
           <Route
             path="/"
             element={
