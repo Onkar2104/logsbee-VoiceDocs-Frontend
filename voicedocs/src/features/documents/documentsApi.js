@@ -101,3 +101,38 @@ export async function fetchLegalDocumentCatalog() {
   const response = await api.get('/documents/legal-catalog')
   return response.data
 }
+
+export async function fetchDocumentTrash(page = 1, pageSize = 10) {
+  const response = await api.get('/documents/trash', { params: { page, page_size: pageSize } })
+  return response.data
+}
+
+export async function restoreDocument(documentId) {
+  const response = await api.post(`/documents/${documentId}/restore`)
+  return response.data
+}
+
+export async function permanentlyDeleteDocument(documentId) {
+  const response = await api.delete(`/documents/${documentId}/permanent`)
+  return response.data
+}
+
+export async function fetchDeletedDocumentVersions(documentId) {
+  const response = await api.get(`/documents/${documentId}/version-trash`)
+  return response.data
+}
+
+export async function deleteDocumentVersion(documentId, versionId) {
+  const response = await api.delete(`/documents/${documentId}/versions/${versionId}`)
+  return response.data
+}
+
+export async function restoreDocumentVersion(documentId, versionId) {
+  const response = await api.post(`/documents/${documentId}/versions/${versionId}/restore`)
+  return response.data
+}
+
+export async function permanentlyDeleteDocumentVersion(documentId, versionId) {
+  const response = await api.delete(`/documents/${documentId}/versions/${versionId}/permanent`)
+  return response.data
+}

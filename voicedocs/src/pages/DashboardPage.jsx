@@ -103,12 +103,13 @@ export default function DashboardPage() {
   const visibleDocuments = documents
 
   async function handleDelete(documentId) {
-    if (!window.confirm('Move this document to the deleted state?')) return
+    if (!window.confirm('Move this document to Trash? You can restore it later. Its Google Drive backups will be removed.')) return
     try {
-      await deleteDocument(documentId)
+      const result = await deleteDocument(documentId)
       setDocuments((current) => current.filter((document) => document.id !== documentId))
       if (documents.length === 1 && page > 1) setPage((current) => current - 1)
       else await loadDocuments()
+      if (result.drive_cleanup_pending) setError('The document was moved to Trash, but some Google Drive backups could not be removed. Reconnect Google Drive and permanently delete the document from Trash to retry cleanup.')
     } catch (requestError) {
       setError(requestError.response?.data?.detail || 'Could not delete the document.')
     }
@@ -255,7 +256,7 @@ export default function DashboardPage() {
                 <article className="document-card" key={document.id}>
                   <div className="document-card-top">
                     <span className="document-icon"><FileText size={20} /></span>
-                    {activeSection === 'my' && (isAccountAdmin || document.owner_user_id === user?.id) && (
+                    {(isAccountAdmin || document.owner_user_id === user?.id) && (
                       <button className="icon-button delete-button" type="button" onClick={() => handleDelete(document.id)} aria-label={`Delete ${document.title}`} title="Delete document">
                         <Trash2 size={16} />
                       </button>
