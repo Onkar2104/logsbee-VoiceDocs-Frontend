@@ -256,7 +256,7 @@ export default function DashboardPage() {
                 <article className="document-card" key={document.id}>
                   <div className="document-card-top">
                     <span className="document-icon"><FileText size={20} /></span>
-                    {activeSection === 'my' && (isAccountAdmin || document.owner_user_id === user?.id) && (
+                    {(isAccountAdmin || document.owner_user_id === user?.id) && (
                       <button className="icon-button delete-button" type="button" onClick={() => handleDelete(document.id)} aria-label={`Delete ${document.title}`} title="Delete document">
                         <Trash2 size={16} />
                       </button>
