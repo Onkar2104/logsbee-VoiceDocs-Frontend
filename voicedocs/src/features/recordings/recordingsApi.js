@@ -67,3 +67,18 @@ export async function backupPendingFiles() {
     .finally(() => { pendingBackupPromise = null })
   return pendingBackupPromise
 }
+
+export async function fetchAudioTrash(page = 1, pageSize = 10) {
+  const response = await api.get('/recordings/trash', { params: { page, page_size: pageSize } })
+  return response.data
+}
+
+export async function restoreRecording(recordingId) {
+  const response = await api.post(`/recordings/${recordingId}/restore`)
+  return response.data
+}
+
+export async function permanentlyDeleteRecording(recordingId) {
+  const response = await api.delete(`/recordings/${recordingId}/permanent`)
+  return response.data
+}
