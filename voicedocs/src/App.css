@@ -1247,3 +1247,94 @@
   color: #667085;
   font-size: 12px;
 }
+
+
+/* Formal document presentation is opt-in and does not affect General Documents. */
+.legal-document-editor {
+  border-color: #d8dce5;
+  border-radius: 5px;
+  background: #f3f5f8;
+  box-shadow: inset 0 0 0 1px rgba(20, 30, 50, .025);
+}
+.legal-document-editor .rich-text-toolbar {
+  border-radius: 5px 5px 0 0;
+  background: rgba(248, 249, 252, .98);
+}
+.legal-document-content {
+  min-height: 520px;
+  max-width: 850px;
+  margin: 22px auto;
+  padding: 58px clamp(28px, 7vw, 76px);
+  border: 1px solid #e4e6eb;
+  background: #fff;
+  box-shadow: 0 5px 22px rgba(28, 39, 60, .07);
+  color: #202124;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 15px;
+  line-height: 1.75;
+}
+.legal-document-content p { margin: 0 0 15px; text-align: justify; }
+.legal-document-content h1 {
+  margin: 0 0 28px;
+  color: #171717;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(20px, 3vw, 25px);
+  font-weight: 700;
+  line-height: 1.4;
+  text-align: center;
+}
+.legal-document-content h2 {
+  margin: 25px 0 12px;
+  color: #202124;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+.legal-document-content h3 {
+  margin: 20px 0 10px;
+  color: #202124;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 15px;
+  font-weight: 700;
+}
+.legal-document-content ol,
+.legal-document-content ul {
+  margin: 10px 0 18px;
+  padding-left: 30px;
+}
+.legal-document-content li {
+  padding-left: 5px;
+  margin-bottom: 8px;
+  text-align: justify;
+}
+.legal-document-content blockquote {
+  margin: 18px 0;
+  padding: 4px 0 4px 18px;
+  border-left: 2px solid #aab1bd;
+  color: #454b55;
+  font-style: italic;
+}
+.legal-document-content table { font-family: Georgia, "Times New Roman", serif; }
+.legal-document-content a { color: #202124; }
+.legal-document-editor .rich-text-status { background: #f8f9fc; }
+.rich-text-readonly.legal-document-editor {
+  overflow: visible;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.rich-text-readonly .legal-document-content {
+  min-height: 0;
+  margin: 0 auto;
+  border-radius: 2px;
+}
+@media (max-width: 640px) {
+  .legal-document-content {
+    min-height: 420px;
+    margin: 12px auto;
+    padding: 30px 22px;
+    font-size: 14px;
+  }
+  .legal-document-content h1 { margin-bottom: 22px; }
+}
