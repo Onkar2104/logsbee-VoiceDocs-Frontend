@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ArrowLeft, Clock3, Download, FileText, Save, Trash2, Sparkles, History } from 'lucide-react'
+import { ArrowLeft, Clock3, Download, FileText, Save, Trash2, Sparkles, History, RotateCcw } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../context/useAuth'
 import VoiceDictation from '../components/VoiceDictation'
 import RichTextEditor from '../components/RichTextEditor'
 import WorkspaceSidebar from '../components/WorkspaceSidebar'
 import { downloadDocumentPdf, downloadBlobFile } from '../features/documents/documentExport'
-import { backupDocument, createDocument, deleteDocument, fetchDocument, requestDocumentEditAccess, updateDocument, formatDocument, fetchDocumentVersions, fetchDocumentVersion, replaceDocumentVersion, createDocumentVersion, backupDocumentVersion, exportDocumentDocx, fetchLegalDocumentCatalog } from '../features/documents/documentsApi'
+import { backupDocument, createDocument, deleteDocument, fetchDocument, requestDocumentEditAccess, updateDocument, formatDocument, fetchDocumentVersions, fetchDocumentVersion, replaceDocumentVersion, createDocumentVersion, backupDocumentVersion, exportDocumentDocx, fetchLegalDocumentCatalog, fetchDeletedDocumentVersions, deleteDocumentVersion, restoreDocumentVersion, permanentlyDeleteDocumentVersion } from '../features/documents/documentsApi'
 import { fetchUserPreferences } from '../features/current-user/preferencesApi'
 import { uploadBrowserRecording } from '../features/recordings/recordingsApi'
 
@@ -26,6 +26,7 @@ export default function DocumentPage() {
   const [content, setContent] = useState('')
   const [formattedContent, setFormattedContent] = useState('')
   const [versions, setVersions] = useState([])
+  const [deletedVersions, setDeletedVersions] = useState([])
   const [selectedVersionId, setSelectedVersionId] = useState(null)
   const [activeTab, setActiveTab] = useState('original')
   const [isFormatting, setIsFormatting] = useState(false)
@@ -82,6 +83,7 @@ export default function DocumentPage() {
         setContent('')
         setFormattedContent('')
         setVersions([])
+        setDeletedVersions([])
         setSelectedVersionId(null)
         setActiveTab('original')
         setFormattingMode('general')
@@ -104,6 +106,12 @@ export default function DocumentPage() {
         const versionData = await fetchDocumentVersions(result.id)
         setVersions(versionData.items || [])
         setSelectedVersionId(versionData.active_version_id || null)
+        try {
+          const deletedData = await fetchDeletedDocumentVersions(result.id)
+          setDeletedVersions(deletedData.items || [])
+        } catch {
+          setDeletedVersions([])
+        }
         if (versionData.active_version_id) {
           const savedVersion = await fetchDocumentVersion(result.id, versionData.active_version_id)
           setFormattedContent(savedVersion.content_html || '')
@@ -326,6 +334,74 @@ export default function DocumentPage() {
       setNotice(`Loaded formatted version ${selected.version_number}.`)
     } catch (loadError) {
       setError(loadError.response?.data?.detail || 'Could not load that formatted version.')
+    }
+  }
+
+  async function handleDeleteVersion() {
+    if (!canManage || !selectedVersionId) return
+    const selected = versions.find((item) => item.id === selectedVersionId)
+    if (!selected) return
+    if (!window.confirm(`Move formatted version ${selected.version_number} to Version Trash?`)) return
+    setIsSavingVersion(true)
+    setError('')
+    setNotice('')
+    try {
+      await deleteDocumentVersion(document.id, selectedVersionId)
+      const [versionData, deletedData] = await Promise.all([
+        fetchDocumentVersions(document.id),
+        fetchDeletedDocumentVersions(document.id),
+      ])
+      setVersions(versionData.items || [])
+      setDeletedVersions(deletedData.items || [])
+      if (versionData.active_version_id) {
+        const active = await fetchDocumentVersion(document.id, versionData.active_version_id)
+        setSelectedVersionId(active.id)
+        setFormattedContent(active.content_html || '')
+      } else {
+        setSelectedVersionId(null)
+        setFormattedContent('')
+        setActiveTab('original')
+      }
+      setNotice('Formatted version moved to Version Trash.')
+    } catch (deleteError) {
+      setError(deleteError.response?.data?.detail || 'Could not move this version to Trash.')
+    } finally {
+      setIsSavingVersion(false)
+    }
+  }
+
+  async function handleRestoreVersion(versionId) {
+    setIsSavingVersion(true)
+    setError('')
+    try {
+      await restoreDocumentVersion(document.id, versionId)
+      const [versionData, deletedData] = await Promise.all([
+        fetchDocumentVersions(document.id),
+        fetchDeletedDocumentVersions(document.id),
+      ])
+      setVersions(versionData.items || [])
+      setDeletedVersions(deletedData.items || [])
+      setNotice('Formatted version restored. Back it up to Google Drive when ready.')
+    } catch (restoreError) {
+      setError(restoreError.response?.data?.detail || 'Could not restore this version.')
+    } finally {
+      setIsSavingVersion(false)
+    }
+  }
+
+  async function handlePermanentlyDeleteVersion(version) {
+    if (!window.confirm(`Permanently delete formatted version ${version.version_number}? This cannot be undone.`)) return
+    setIsSavingVersion(true)
+    setError('')
+    try {
+      await permanentlyDeleteDocumentVersion(document.id, version.id)
+      const deletedData = await fetchDeletedDocumentVersions(document.id)
+      setDeletedVersions(deletedData.items || [])
+      setNotice(`Formatted version ${version.version_number} permanently deleted.`)
+    } catch (deleteError) {
+      setError(deleteError.response?.data?.detail || 'Could not permanently delete this version.')
+    } finally {
+      setIsSavingVersion(false)
     }
   }
 
@@ -580,7 +656,31 @@ export default function DocumentPage() {
                         {isSavingVersion ? 'Backing up…' : 'Back up formatted version'}
                       </button>
                     )}
+                    {canManage && selectedVersionId && (
+                      <button className="danger-button" type="button" onClick={handleDeleteVersion} disabled={isSavingVersion}>
+                        <Trash2 size={15} /> Move version to Trash
+                      </button>
+                    )}
                   </div>
+                  {canManage && (
+                    <section className="version-trash-panel">
+                      <div className="version-trash-heading">
+                        <div><strong>Version Trash</strong><span>Deleted formatted versions can be restored here.</span></div>
+                        <span className="document-count">{deletedVersions.length}</span>
+                      </div>
+                      {deletedVersions.length === 0 ? (
+                        <p className="version-trash-empty">No deleted versions.</p>
+                      ) : deletedVersions.map((version) => (
+                        <div className="version-trash-row" key={version.id}>
+                          <span>Version {version.version_number} · Deleted {formatDate(version.deleted_at)}</span>
+                          <div>
+                            <button className="secondary-button" type="button" onClick={() => void handleRestoreVersion(version.id)} disabled={isSavingVersion}><RotateCcw size={14} /> Restore</button>
+                            <button className="danger-button" type="button" onClick={() => void handlePermanentlyDeleteVersion(version)} disabled={isSavingVersion}><Trash2 size={14} /> Delete permanently</button>
+                          </div>
+                        </div>
+                      ))}
+                    </section>
+                  )}
                   <RichTextEditor value={formattedContent} onChange={setFormattedContent} documentMode={formattingMode} />
                   <div className="editor-actions">
                     <span className="editor-hint">The original transcript remains unchanged.</span>
