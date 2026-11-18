@@ -563,7 +563,7 @@ export default function DocumentPage() {
               {activeTab === 'original' || isNewDocument ? (
                 <>
                   <VoiceDictation key={documentId} defaultLanguage={defaultLanguage} onTranscript={handleTranscriptInsert} onLiveTranscript={handleLiveTranscriptInsert} />
-                  <RichTextEditor editorRef={contentTextareaRef} value={content} onChange={setContent} />
+                  <RichTextEditor editorRef={contentTextareaRef} value={content} onChange={setContent} documentMode={formattingMode} />
                   <div className="editor-actions">
                     <span className="editor-hint">{isNewDocument ? 'A title is required to create this document.' : 'The original transcript is kept separately from formatted versions.'}</span>
                   </div>
@@ -582,7 +582,7 @@ export default function DocumentPage() {
                       </button>
                     )}
                   </div>
-                  <RichTextEditor value={formattedContent} onChange={setFormattedContent} />
+                  <RichTextEditor value={formattedContent} onChange={setFormattedContent} documentMode={formattingMode} />
                   <div className="editor-actions">
                     <span className="editor-hint">The original transcript remains unchanged.</span>
                   </div>
@@ -599,7 +599,7 @@ export default function DocumentPage() {
                 <button type="button" role="tab" aria-selected={activeTab === 'formatted'} className={activeTab === 'formatted' ? 'active' : ''} onClick={() => setActiveTab('formatted')}>Formatted Document</button>
               </div>
               {activeTab === 'original' ? (
-                <RichTextEditor value={document.content || ''} editable={false} />
+                <RichTextEditor value={document.content || ''} editable={false} documentMode={document.formatting_mode || 'general'} />
               ) : (
                 <>
                   {versions.length > 0 && (
@@ -610,7 +610,7 @@ export default function DocumentPage() {
                       </select>
                     </div>
                   )}
-                  {formattedContent ? <RichTextEditor value={formattedContent} editable={false} /> : <p>No formatted version has been saved yet.</p>}
+                  {formattedContent ? <RichTextEditor value={formattedContent} editable={false} documentMode={document.formatting_mode || 'general'} /> : <p>No formatted version has been saved yet.</p>}
                 </>
               )}
             </div>
