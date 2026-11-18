@@ -31,7 +31,15 @@ export default function TrashPage() {
     }
   }, [page])
 
-  useEffect(() => { void loadTrash() }, [loadTrash])
+  useEffect(() => {
+    let cancelled = false
+    const startLoading = async () => {
+      await Promise.resolve()
+      if (!cancelled) await loadTrash()
+    }
+    void startLoading()
+    return () => { cancelled = true }
+  }, [loadTrash])
 
   async function handleRestore(item) {
     setBusyId(item.id)
