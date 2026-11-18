@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { FileText, Plus, Search, RefreshCw, Trash2, Clock3, Files } from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
+import { FileText, Plus, Search, RefreshCw, Trash2, Clock3, Files, Filter, X } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import WorkspaceSidebar from '../components/WorkspaceSidebar'
 import { useAuth } from '../context/useAuth'
@@ -38,6 +38,10 @@ export default function DashboardPage() {
   const [activeSection, setActiveSection] = useState('my')
   const [sharedByMeCount, setSharedByMeCount] = useState(0)
   const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [legalCategory, setLegalCategory] = useState('')
+  const [documentType, setDocumentType] = useState('')
+  const [availableFilters, setAvailableFilters] = useState({ legal_categories: [], document_types: [] })
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
   const [backingUpDocumentId, setBackingUpDocumentId] = useState(null)
@@ -60,15 +64,21 @@ export default function DashboardPage() {
     setIsLoading(true)
     setError('')
     try {
-      const result = await fetchDocuments(currentSection, page, 10)
+      const result = await fetchDocuments(currentSection, page, 10, { search: debouncedSearch, legalCategory, documentType })
       setDocuments(Array.isArray(result?.items) ? result.items : Array.isArray(result) ? result : [])
       setPagination(result?.pagination || { page: 1, total_pages: 1, total_records: Array.isArray(result) ? result.length : 0, has_next: false, has_previous: false })
+      setAvailableFilters(result?.filters || { legal_categories: [], document_types: [] })
     } catch (requestError) {
       setError(requestError.response?.data?.detail || 'Could not load your documents. Please try again.')
     } finally {
       setIsLoading(false)
     }
-  }, [currentSection, page])
+  }, [currentSection, page, debouncedSearch, legalCategory, documentType])
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedSearch(search.trim()), 350)
+    return () => window.clearTimeout(timer)
+  }, [search])
 
   useEffect(() => {
     let cancelled = false
@@ -90,17 +100,7 @@ export default function DashboardPage() {
     return () => { cancelled = true }
   }, [loadSharingSummary])
 
-  const visibleDocuments = useMemo(() => {
-    const query = search.trim().toLowerCase()
-    return documents.filter((document) => {
-      const belongsInSection = currentSection === 'my'
-        ? document.owner_user_id === user?.id
-        : currentSection === 'shared'
-          ? Boolean(document.shared_by_user_id)
-          : true
-      return belongsInSection && (!query || document.title?.toLowerCase().includes(query))
-    })
-  }, [documents, search, user?.id, currentSection])
+  const visibleDocuments = documents
 
   async function handleDelete(documentId) {
     if (!window.confirm('Move this document to the deleted state?')) return
@@ -152,17 +152,12 @@ export default function DashboardPage() {
           <div className="documents-toolbar">
             <div>
               <p className="eyebrow">DOCUMENT LIBRARY</p>
-              <h2>{activeSection === 'my' ? 'My Documents' : activeSection === 'shared' ? 'Shared with Me' : 'Shared by Me'} <span className="document-count">{visibleDocuments.length}</span></h2>
+              <h2>{activeSection === 'my' ? 'My Documents' : activeSection === 'shared' ? 'Shared with Me' : 'Shared by Me'} <span className="document-count">{pagination.total_records}</span></h2>
+              <p className="documents-subtitle">Find, filter and manage your workspace documents.</p>
             </div>
-            <div className="document-tools">
-              <label className="search-field">
-                <Search size={17} />
-                <input aria-label="Search documents" value={search} onChange={(event) => { setSearch(event.target.value); setPage(1) }} placeholder="Search documents" />
-              </label>
-              <button className="icon-button" type="button" onClick={() => { loadDocuments(); loadSharingSummary() }} aria-label="Refresh documents" title="Refresh">
-                <RefreshCw size={17} />
-              </button>
-            </div>
+            <button className="icon-button documents-refresh" type="button" onClick={() => { loadDocuments(); loadSharingSummary() }} aria-label="Refresh documents" title="Refresh">
+              <RefreshCw size={17} />
+            </button>
           </div>
 
           <div className="document-section-switcher" role="tablist" aria-label="Document sections">
@@ -201,6 +196,48 @@ export default function DashboardPage() {
             )}
           </div>
 
+          <div className="document-query-panel">
+            <div className="document-query-heading">
+              <div className="document-query-title">
+                <span className="document-query-icon"><Filter size={16} /></span>
+                <div>
+                  <strong>Search and filters</strong>
+                  <span>Search by title or words inside a document</span>
+                </div>
+              </div>
+              {(search || legalCategory || documentType) && (
+                <button className="clear-document-filters" type="button" onClick={() => { setSearch(''); setDebouncedSearch(''); setLegalCategory(''); setDocumentType(''); setPage(1) }}>
+                  <X size={14} /> Clear all
+                </button>
+              )}
+            </div>
+            <div className="document-query-controls">
+              <label className="document-search-field">
+                <Search size={17} />
+                <input aria-label="Search document titles and content" value={search} onChange={(event) => { setSearch(event.target.value); setPage(1) }} placeholder="Search by document title or content..." />
+                {search && <button type="button" aria-label="Clear search" onClick={() => { setSearch(''); setPage(1) }}><X size={15} /></button>}
+              </label>
+              <label className="document-filter-field">
+                <span>Legal category</span>
+                <select value={legalCategory} onChange={(event) => { setLegalCategory(event.target.value); setPage(1) }}>
+                  <option value="">All categories</option>
+                  {availableFilters.legal_categories.map((value) => <option key={value} value={value}>{value}</option>)}
+                </select>
+              </label>
+              <label className="document-filter-field">
+                <span>Document type</span>
+                <select value={documentType} onChange={(event) => { setDocumentType(event.target.value); setPage(1) }}>
+                  <option value="">All types</option>
+                  {availableFilters.document_types.map((value) => <option key={value} value={value}>{value}</option>)}
+                </select>
+              </label>
+            </div>
+            <div className="document-query-footer">
+              <span>{isLoading ? 'Updating results…' : `${pagination.total_records} ${pagination.total_records === 1 ? 'document' : 'documents'} found`}</span>
+              <span>Search applies across all pages</span>
+            </div>
+          </div>
+
           {error && <p className="alert alert-error" role="alert">{error}</p>}
 
           {isLoading ? (
@@ -208,8 +245,8 @@ export default function DashboardPage() {
           ) : visibleDocuments.length === 0 ? (
             <div className="documents-empty">
               <span className="empty-icon"><Files size={25} /></span>
-              <h3>{search ? 'No matching documents' : activeSection === 'my' ? 'No documents yet' : activeSection === 'shared' ? 'Nothing shared with you yet' : 'No documents shared by you'}</h3>
-              <p>{search ? 'Try a different search term.' : activeSection === 'my' ? 'Create your first document to get started.' : activeSection === 'shared' ? 'Documents shared with you by your teammates will appear here.' : 'Documents you have shared with teammates will appear here.'}</p>
+              <h3>{search || legalCategory || documentType ? 'No matching documents' : activeSection === 'my' ? 'No documents yet' : activeSection === 'shared' ? 'Nothing shared with you yet' : 'No documents shared by you'}</h3>
+              <p>{search || legalCategory || documentType ? 'Try changing your search or filters.' : activeSection === 'my' ? 'Create your first document to get started.' : activeSection === 'shared' ? 'Documents shared with you by your teammates will appear here.' : 'Documents you have shared with teammates will appear here.'}</p>
               {activeSection === 'my' && !search && <button className="primary-button empty-create-button" type="button" onClick={() => navigate('/documents/new')}><Plus size={16} /> Create your first document</button>}
             </div>
           ) : (

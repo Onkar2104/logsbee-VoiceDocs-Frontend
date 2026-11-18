@@ -1,8 +1,15 @@
 import { api } from '../../lib/api'
 
-export async function fetchDocuments(scope = 'my', page = 1, pageSize = 10) {
+export async function fetchDocuments(scope = 'my', page = 1, pageSize = 10, filters = {}) {
   const response = await api.get('/documents/', {
-    params: { scope, page, page_size: pageSize },
+    params: {
+      scope,
+      page,
+      page_size: pageSize,
+      search: filters.search || undefined,
+      legal_category: filters.legalCategory || undefined,
+      document_type: filters.documentType || undefined,
+    },
   })
   return response.data
 }
