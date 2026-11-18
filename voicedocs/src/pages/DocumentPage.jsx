@@ -440,7 +440,7 @@ export default function DocumentPage() {
   }
 
   async function handleDelete() {
-    if (!window.confirm('Are you sure you want to delete this document?')) return
+    if (!window.confirm('Move this document to Trash? You can restore it later. Its Google Drive backups will be removed.')) return
     try {
       await deleteDocument(documentId)
       navigate('/', { replace: true })
