@@ -89,3 +89,8 @@ export async function exportDocumentDocx(documentId, contentHtml) {
   )
   return response.data
 }
+
+export async function fetchLegalDocumentCatalog() {
+  const response = await api.get('/documents/legal-catalog')
+  return response.data
+}

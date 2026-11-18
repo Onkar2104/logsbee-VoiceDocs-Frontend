@@ -6,7 +6,7 @@ import VoiceDictation from '../components/VoiceDictation'
 import RichTextEditor from '../components/RichTextEditor'
 import WorkspaceSidebar from '../components/WorkspaceSidebar'
 import { downloadDocumentPdf, downloadBlobFile } from '../features/documents/documentExport'
-import { backupDocument, createDocument, deleteDocument, fetchDocument, requestDocumentEditAccess, updateDocument, formatDocument, fetchDocumentVersions, fetchDocumentVersion, replaceDocumentVersion, createDocumentVersion, backupDocumentVersion, exportDocumentDocx } from '../features/documents/documentsApi'
+import { backupDocument, createDocument, deleteDocument, fetchDocument, requestDocumentEditAccess, updateDocument, formatDocument, fetchDocumentVersions, fetchDocumentVersion, replaceDocumentVersion, createDocumentVersion, backupDocumentVersion, exportDocumentDocx, fetchLegalDocumentCatalog } from '../features/documents/documentsApi'
 import { fetchUserPreferences } from '../features/current-user/preferencesApi'
 import { uploadBrowserRecording } from '../features/recordings/recordingsApi'
 
@@ -40,7 +40,22 @@ export default function DocumentPage() {
   const [downloadFormat, setDownloadFormat] = useState('')
   const [pendingRecordings, setPendingRecordings] = useState([])
   const [isBackingUp, setIsBackingUp] = useState(false)
+  const [legalCatalog, setLegalCatalog] = useState({ jurisdictions: [], categories: [] })
+  const [isLegalCatalogLoading, setIsLegalCatalogLoading] = useState(true)
+  const [formattingMode, setFormattingMode] = useState('general')
+  const [jurisdiction, setJurisdiction] = useState('IN')
+  const [legalCategory, setLegalCategory] = useState('')
+  const [legalDocumentType, setLegalDocumentType] = useState('')
   const contentTextareaRef = useRef(null)
+
+  const selectedLegalCategory = legalCatalog.categories.find((item) => item.id === legalCategory)
+  const legalMetadata = {
+    formatting_mode: formattingMode,
+    jurisdiction: formattingMode === 'legal' ? jurisdiction : null,
+    legal_category: formattingMode === 'legal' ? legalCategory : null,
+    document_type: formattingMode === 'legal' ? legalDocumentType : null,
+  }
+  const legalSelectionIsValid = formattingMode === 'general' || Boolean(jurisdiction && legalCategory && legalDocumentType)
 
   const isAccountAdmin = user?.role?.name?.trim().toLowerCase() === 'admin'
   // A newly opened draft belongs to the current user and must be editable
@@ -69,6 +84,10 @@ export default function DocumentPage() {
         setVersions([])
         setSelectedVersionId(null)
         setActiveTab('original')
+        setFormattingMode('general')
+        setJurisdiction('IN')
+        setLegalCategory('')
+        setLegalDocumentType('')
         return
       }
 
@@ -76,6 +95,10 @@ export default function DocumentPage() {
       setDocument(result)
       setTitle(result.title || '')
       setContent(result.content || '')
+      setFormattingMode(result.formatting_mode || 'general')
+      setJurisdiction(result.jurisdiction || 'IN')
+      setLegalCategory(result.legal_category || '')
+      setLegalDocumentType(result.document_type || '')
       setActiveTab('original')
       try {
         const versionData = await fetchDocumentVersions(result.id)
@@ -99,6 +122,17 @@ export default function DocumentPage() {
       setIsLoading(false)
     }
   }, [documentId, isNewDocument, user])
+
+  useEffect(() => {
+    let cancelled = false
+    fetchLegalDocumentCatalog()
+      .then((catalog) => { if (!cancelled) setLegalCatalog(catalog) })
+      .catch((catalogError) => {
+        if (!cancelled) setError(catalogError.response?.data?.detail || 'Legal document options could not be loaded.')
+      })
+      .finally(() => { if (!cancelled) setIsLegalCatalogLoading(false) })
+    return () => { cancelled = true }
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -154,12 +188,16 @@ export default function DocumentPage() {
       setError('Document title cannot be empty.')
       return
     }
+    if (!legalSelectionIsValid) {
+      setError('Select a legal category and document type before saving.')
+      return
+    }
     setIsSaving(true)
     setError('')
     setNotice('')
     try {
       if (!isNewDocument && activeTab === 'formatted' && selectedVersionId) {
-        const updatedOriginal = await updateDocument(documentId, { title: title.trim(), content })
+        const updatedOriginal = await updateDocument(documentId, { title: title.trim(), content, ...legalMetadata })
         setDocument(updatedOriginal)
         const audioBackupPending = await savePendingRecordings(updatedOriginal.id)
         const savedVersion = await replaceDocumentVersion(documentId, selectedVersionId, formattedContent)
@@ -173,8 +211,8 @@ export default function DocumentPage() {
         return
       }
       const updated = isNewDocument
-        ? await createDocument({ title: title.trim(), content })
-        : await updateDocument(documentId, { title: title.trim(), content })
+        ? await createDocument({ title: title.trim(), content, ...legalMetadata })
+        : await updateDocument(documentId, { title: title.trim(), content, ...legalMetadata })
       setDocument(updated)
       setTitle(updated.title)
       setContent(updated.content)
@@ -203,7 +241,8 @@ export default function DocumentPage() {
     setError('')
     setNotice('')
     try {
-      const savedOriginal = await updateDocument(document.id, { title: title.trim(), content })
+      if (!legalSelectionIsValid) throw new Error('Select a legal category and document type before formatting.')
+      const savedOriginal = await updateDocument(document.id, { title: title.trim(), content, ...legalMetadata })
       setDocument(savedOriginal)
       setContent(savedOriginal.content || content)
       const audioBackupPending = await savePendingRecordings(savedOriginal.id)
@@ -229,7 +268,7 @@ export default function DocumentPage() {
     setError('')
     setNotice('')
     try {
-      const updatedOriginal = await updateDocument(document.id, { title: title.trim(), content })
+      const updatedOriginal = await updateDocument(document.id, { title: title.trim(), content, ...legalMetadata })
       setDocument(updatedOriginal)
       const audioBackupPending = await savePendingRecordings(updatedOriginal.id)
       const result = await createDocumentVersion(document.id, formattedContent)
@@ -450,6 +489,67 @@ export default function DocumentPage() {
           {notice && <p className="alert alert-success" role="status">{notice}</p>}
           {canEdit ? (
             <form onSubmit={handleSave} className="document-editor-form">
+              <div className="document-sticky-actions">
+                <button
+                  className="secondary-button"
+                  type="button"
+                  onClick={handleFormatDocument}
+                  disabled={isNewDocument || isFormatting || !content.trim() || !legalSelectionIsValid}
+                >
+                  <Sparkles size={16} /> {isFormatting ? 'Formatting…' : formattingMode === 'legal' ? 'Format Legal Document' : 'Format Document'}
+                </button>
+                <button className="primary-button save-button" type="submit" disabled={isSaving || !title.trim() || !legalSelectionIsValid}>
+                  <Save size={16} /> {isSaving ? 'Saving…' : activeTab === 'formatted' ? 'Save formatted version' : isNewDocument ? 'Create document' : 'Save document'}
+                </button>
+                {activeTab === 'formatted' && selectedVersionId && (
+                  <button className="secondary-button" type="button" onClick={handleSaveAsNewVersion} disabled={isSavingVersion || !formattedContent.trim()}>
+                    {isSavingVersion ? 'Saving version…' : 'Save as new version'}
+                  </button>
+                )}
+              </div>
+              <div className="document-format-mode-panel">
+                <label htmlFor="document-format-mode">Formatting mode</label>
+                <select
+                  id="document-format-mode"
+                  value={formattingMode}
+                  onChange={(event) => {
+                    const nextMode = event.target.value
+                    setFormattingMode(nextMode)
+                    if (nextMode === 'general') {
+                      setJurisdiction(null)
+                      setLegalCategory('')
+                      setLegalDocumentType('')
+                    } else {
+                      setJurisdiction('IN')
+                    }
+                  }}
+                >
+                  <option value="general">General Document</option>
+                  <option value="legal">Legal Document</option>
+                </select>
+                {formattingMode === 'legal' && (
+                  <>
+                  <p className="legal-jurisdiction-note">Jurisdiction: India</p>
+                  <div className="legal-document-selectors">
+                    <div>
+                      <label htmlFor="legal-category">Legal Category</label>
+                      <select id="legal-category" value={legalCategory} disabled={isLegalCatalogLoading} onChange={(event) => { setLegalCategory(event.target.value); setLegalDocumentType('') }}>
+                        <option value="">Select legal category</option>
+                        {legalCatalog.categories.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label htmlFor="legal-document-type">Document Type</label>
+                      <select id="legal-document-type" value={legalDocumentType} disabled={!selectedLegalCategory} onChange={(event) => setLegalDocumentType(event.target.value)}>
+                        <option value="">Select document type</option>
+                        {(selectedLegalCategory?.document_types || []).map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  </>
+                )}
+              </div>
+              {formattingMode === 'legal' && <p className="legal-review-note">Review the formatted document with a qualified legal professional before use.</p>}
               <label htmlFor="edit-document-title">Document title <span className="required-label">*</span></label>
               <input id="edit-document-title" value={title} onChange={(event) => setTitle(event.target.value)} maxLength={255} required placeholder="Enter a document title" />
               <label htmlFor="edit-document-content">Content</label>
@@ -462,13 +562,9 @@ export default function DocumentPage() {
               {activeTab === 'original' || isNewDocument ? (
                 <>
                   <VoiceDictation key={documentId} defaultLanguage={defaultLanguage} onTranscript={handleTranscriptInsert} onLiveTranscript={handleLiveTranscriptInsert} />
-                  <RichTextEditor editorRef={contentTextareaRef} value={content} onChange={setContent} />
+                  <RichTextEditor editorRef={contentTextareaRef} value={content} onChange={setContent} documentMode={formattingMode} />
                   <div className="editor-actions">
                     <span className="editor-hint">{isNewDocument ? 'A title is required to create this document.' : 'The original transcript is kept separately from formatted versions.'}</span>
-                    <div className="document-version-actions">
-                      {!isNewDocument && <button className="secondary-button" type="button" onClick={handleFormatDocument} disabled={isFormatting || !content.trim()}><Sparkles size={16} /> {isFormatting ? 'AI is formatting your document…' : 'Format Document'}</button>}
-                      <button className="primary-button save-button" type="submit" disabled={isSaving || !title.trim()}><Save size={16} /> {isSaving ? 'Saving…' : isNewDocument ? 'Create document' : 'Save original'}</button>
-                    </div>
                   </div>
                 </>
               ) : (
@@ -485,13 +581,9 @@ export default function DocumentPage() {
                       </button>
                     )}
                   </div>
-                  <RichTextEditor value={formattedContent} onChange={setFormattedContent} />
+                  <RichTextEditor value={formattedContent} onChange={setFormattedContent} documentMode={formattingMode} />
                   <div className="editor-actions">
                     <span className="editor-hint">The original transcript remains unchanged.</span>
-                    <div className="document-version-actions">
-                      <button className="secondary-button" type="button" onClick={handleSaveAsNewVersion} disabled={isSavingVersion || !formattedContent.trim()}>{isSavingVersion ? 'Saving…' : 'Save as new version'}</button>
-                      <button className="primary-button save-button" type="submit" disabled={isSaving || !title.trim() || !selectedVersionId}><Save size={16} /> {isSaving ? 'Saving…' : 'Replace current version'}</button>
-                    </div>
                   </div>
                 </>
               )}
@@ -506,7 +598,7 @@ export default function DocumentPage() {
                 <button type="button" role="tab" aria-selected={activeTab === 'formatted'} className={activeTab === 'formatted' ? 'active' : ''} onClick={() => setActiveTab('formatted')}>Formatted Document</button>
               </div>
               {activeTab === 'original' ? (
-                <RichTextEditor value={document.content || ''} editable={false} />
+                <RichTextEditor value={document.content || ''} editable={false} documentMode={document.formatting_mode || 'general'} />
               ) : (
                 <>
                   {versions.length > 0 && (
@@ -517,7 +609,7 @@ export default function DocumentPage() {
                       </select>
                     </div>
                   )}
-                  {formattedContent ? <RichTextEditor value={formattedContent} editable={false} /> : <p>No formatted version has been saved yet.</p>}
+                  {formattedContent ? <RichTextEditor value={formattedContent} editable={false} documentMode={document.formatting_mode || 'general'} /> : <p>No formatted version has been saved yet.</p>}
                 </>
               )}
             </div>
