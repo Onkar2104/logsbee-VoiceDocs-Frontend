@@ -41,7 +41,7 @@ export default function DocumentPage() {
   const [pendingRecordings, setPendingRecordings] = useState([])
   const [isBackingUp, setIsBackingUp] = useState(false)
   const [legalCatalog, setLegalCatalog] = useState({ jurisdictions: [], categories: [] })
-  const [isLegalCatalogLoading, setIsLegalCatalogLoading] = useState(false)
+  const [isLegalCatalogLoading, setIsLegalCatalogLoading] = useState(true)
   const [formattingMode, setFormattingMode] = useState('general')
   const [jurisdiction, setJurisdiction] = useState('IN')
   const [legalCategory, setLegalCategory] = useState('')
@@ -125,7 +125,6 @@ export default function DocumentPage() {
 
   useEffect(() => {
     let cancelled = false
-    setIsLegalCatalogLoading(true)
     fetchLegalDocumentCatalog()
       .then((catalog) => { if (!cancelled) setLegalCatalog(catalog) })
       .catch((catalogError) => {
