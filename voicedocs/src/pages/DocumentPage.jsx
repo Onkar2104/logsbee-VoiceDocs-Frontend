@@ -28,6 +28,7 @@ export default function DocumentPage() {
   const [versions, setVersions] = useState([])
   const [deletedVersions, setDeletedVersions] = useState([])
   const [selectedVersionId, setSelectedVersionId] = useState(null)
+  const [activeVersionId, setActiveVersionId] = useState(null)
   const [activeTab, setActiveTab] = useState('original')
   const [isFormatting, setIsFormatting] = useState(false)
   const [isSavingVersion, setIsSavingVersion] = useState(false)
@@ -85,6 +86,7 @@ export default function DocumentPage() {
         setVersions([])
         setDeletedVersions([])
         setSelectedVersionId(null)
+        setActiveVersionId(null)
         setActiveTab('original')
         setFormattingMode('general')
         setJurisdiction('IN')
@@ -106,6 +108,7 @@ export default function DocumentPage() {
         const versionData = await fetchDocumentVersions(result.id)
         setVersions(versionData.items || [])
         setSelectedVersionId(versionData.active_version_id || null)
+        setActiveVersionId(versionData.active_version_id || null)
         try {
           const deletedData = await fetchDeletedDocumentVersions(result.id)
           setDeletedVersions(deletedData.items || [])
@@ -352,6 +355,7 @@ export default function DocumentPage() {
         fetchDeletedDocumentVersions(document.id),
       ])
       setVersions(versionData.items || [])
+      setActiveVersionId(versionData.active_version_id || null)
       setDeletedVersions(deletedData.items || [])
       if (versionData.active_version_id) {
         const active = await fetchDocumentVersion(document.id, versionData.active_version_id)
@@ -657,7 +661,7 @@ export default function DocumentPage() {
                       </button>
                     )}
                     {canManage && selectedVersionId && (
-                      <button className="danger-button" type="button" onClick={handleDeleteVersion} disabled={isSavingVersion}>
+                      <button className="danger-button" type="button" onClick={handleDeleteVersion} disabled={isSavingVersion || selectedVersionId === activeVersionId} title={selectedVersionId === activeVersionId ? 'Select another version before deleting the active version' : 'Move version to Trash'}>
                         <Trash2 size={15} /> Move version to Trash
                       </button>
                     )}
