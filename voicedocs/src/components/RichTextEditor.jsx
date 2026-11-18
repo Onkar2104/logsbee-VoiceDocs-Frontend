@@ -70,7 +70,7 @@ const TOOL_GROUPS = [
   ],
 ]
 
-export default function RichTextEditor({ value, onChange, editable = true, editorRef, placeholder = 'Start writing your document…' }) {
+export default function RichTextEditor({ value, onChange, editable = true, editorRef, placeholder = 'Start writing your document…', documentMode = 'general' }) {
   const [initialContent] = useState(() => toEditorContent(value || ''))
   const imageInputRef = useRef(null)
   function handleImageSelected(event) {
@@ -131,7 +131,7 @@ export default function RichTextEditor({ value, onChange, editable = true, edito
     editable,
     editorProps: {
       attributes: {
-        class: 'rich-text-content',
+        class: `rich-text-content ${documentMode === 'legal' ? 'legal-document-content' : ''}`,
         'aria-label': 'Document content editor',
         id: 'edit-document-content',
         'data-placeholder': placeholder,
@@ -176,7 +176,7 @@ export default function RichTextEditor({ value, onChange, editable = true, edito
   if (!editor) return <div className="rich-text-loading">Loading editor…</div>
 
   return (
-    <div className={`rich-text-editor ${editable ? '' : 'rich-text-readonly'}`}>
+    <div className={`rich-text-editor ${editable ? '' : 'rich-text-readonly'} ${documentMode === 'legal' ? 'legal-document-editor' : ''}`}>
       {editable && (
         <div className="rich-text-toolbar" role="toolbar" aria-label="Text formatting">
           {TOOL_GROUPS.map((group, groupIndex) => (
