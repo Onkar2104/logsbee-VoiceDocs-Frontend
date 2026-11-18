@@ -107,6 +107,7 @@ export default function DocumentPage() {
       try {
         const versionData = await fetchDocumentVersions(result.id)
         setVersions(versionData.items || [])
+        setActiveVersionId(versionData.active_version_id || null)
         setSelectedVersionId(versionData.active_version_id || null)
         setActiveVersionId(versionData.active_version_id || null)
         try {
@@ -216,6 +217,7 @@ export default function DocumentPage() {
         setSelectedVersionId(savedVersion.id)
         const versionData = await fetchDocumentVersions(documentId)
         setVersions(versionData.items || [])
+        setActiveVersionId(versionData.active_version_id || null)
         setNotice(savedVersion.backup_status === 'backed_up' && !audioBackupPending
           ? 'Formatted version saved and backed up to Google Drive.'
           : 'Formatted version saved in VoiceDocs. A Google Drive backup is pending.')
@@ -262,6 +264,7 @@ export default function DocumentPage() {
       setSelectedVersionId(result.id)
       const versionData = await fetchDocumentVersions(document.id)
       setVersions(versionData.items || [])
+      setActiveVersionId(versionData.active_version_id || null)
       setActiveTab('formatted')
       setNotice(result.backup_status === 'backed_up' && !audioBackupPending
         ? 'Your formatted document is ready and backed up to Google Drive.'
@@ -287,6 +290,7 @@ export default function DocumentPage() {
       setFormattedContent(result.content_html || formattedContent)
       const versionData = await fetchDocumentVersions(document.id)
       setVersions(versionData.items || [])
+      setActiveVersionId(versionData.active_version_id || null)
       setNotice(result.backup_status === 'backed_up' && !audioBackupPending
         ? 'A new formatted version was saved and backed up to Google Drive.'
         : 'A new formatted version was saved in VoiceDocs. A Google Drive backup is pending.')
@@ -306,6 +310,7 @@ export default function DocumentPage() {
       await backupDocumentVersion(document.id, selectedVersionId)
       const versionData = await fetchDocumentVersions(document.id)
       setVersions(versionData.items || [])
+      setActiveVersionId(versionData.active_version_id || null)
       setNotice('Formatted version backed up to Google Drive. VoiceDocs database copy is retained.')
     } catch (backupError) {
       setError(backupError.response?.data?.detail || 'Formatted version backup failed. It remains saved in VoiceDocs.')
@@ -384,6 +389,7 @@ export default function DocumentPage() {
         fetchDeletedDocumentVersions(document.id),
       ])
       setVersions(versionData.items || [])
+      setActiveVersionId(versionData.active_version_id || null)
       setDeletedVersions(deletedData.items || [])
       setNotice('Formatted version restored. Back it up to Google Drive when ready.')
     } catch (restoreError) {
