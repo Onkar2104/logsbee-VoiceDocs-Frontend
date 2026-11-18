@@ -1484,3 +1484,6 @@
   .version-trash-row > div { width: 100%; }
   .version-trash-row > div button { flex: 1; }
 }
+
+
+.trash-drive-pending { color: #a12e2e !important; font-weight: 650; }
