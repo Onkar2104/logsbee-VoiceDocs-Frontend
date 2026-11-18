@@ -136,3 +136,8 @@ export async function permanentlyDeleteDocumentVersion(documentId, versionId) {
   const response = await api.delete(`/documents/${documentId}/versions/${versionId}/permanent`)
   return response.data
 }
+
+export async function fetchAllDeletedDocumentVersions() {
+  const response = await api.get('/documents/version-trash')
+  return response.data
+}

@@ -8,9 +8,9 @@ import { fetchGoogleDriveStatus, backupPendingFiles } from '../features/recordin
 const links = [
   { to: '/', label: 'Home', icon: House, end: true },
   { to: '/documents', label: 'Documents', icon: FileText },
-  { to: '/trash', label: 'Trash', icon: Trash2 },
   { to: '/audio', label: 'Audio', icon: AudioLines },
   { to: '/drive', label: 'Google Drive', icon: HardDrive },
+  { to: '/trash', label: 'Trash', icon: Trash2 },
   { to: '/profile', label: 'Profile & Settings', icon: UserRound },
 ]
 
