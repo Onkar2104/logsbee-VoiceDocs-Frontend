@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { FileText, Plus, Search, RefreshCw, Trash2, Clock3, Files } from 'lucide-react'
+import { FileText, Plus, Search, RefreshCw, Trash2, Clock3, Files, Filter, X } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import WorkspaceSidebar from '../components/WorkspaceSidebar'
 import { useAuth } from '../context/useAuth'
@@ -153,33 +153,11 @@ export default function DashboardPage() {
             <div>
               <p className="eyebrow">DOCUMENT LIBRARY</p>
               <h2>{activeSection === 'my' ? 'My Documents' : activeSection === 'shared' ? 'Shared with Me' : 'Shared by Me'} <span className="document-count">{pagination.total_records}</span></h2>
+              <p className="documents-subtitle">Find, filter and manage your workspace documents.</p>
             </div>
-            <div className="document-tools">
-              <label className="search-field">
-                <Search size={17} />
-                <input aria-label="Search documents" value={search} onChange={(event) => { setSearch(event.target.value); setPage(1) }} placeholder="Search documents" />
-              </label>
-              <button className="icon-button" type="button" onClick={() => { loadDocuments(); loadSharingSummary() }} aria-label="Refresh documents" title="Refresh">
-                <RefreshCw size={17} />
-              </button>
-            </div>
-          </div>
-
-          <div className="document-filters">
-            <label>
-              <span>Legal category</span>
-              <select value={legalCategory} onChange={(event) => { setLegalCategory(event.target.value); setPage(1) }}>
-                <option value="">All legal categories</option>
-                {availableFilters.legal_categories.map((value) => <option key={value} value={value}>{value}</option>)}
-              </select>
-            </label>
-            <label>
-              <span>Document type</span>
-              <select value={documentType} onChange={(event) => { setDocumentType(event.target.value); setPage(1) }}>
-                <option value="">All document types</option>
-                {availableFilters.document_types.map((value) => <option key={value} value={value}>{value}</option>)}
-              </select>
-            </label>
+            <button className="icon-button documents-refresh" type="button" onClick={() => { loadDocuments(); loadSharingSummary() }} aria-label="Refresh documents" title="Refresh">
+              <RefreshCw size={17} />
+            </button>
           </div>
 
           <div className="document-section-switcher" role="tablist" aria-label="Document sections">
@@ -216,6 +194,48 @@ export default function DashboardPage() {
                 <span className="document-count">{sharedByMeCount}</span>
               </button>
             )}
+          </div>
+
+          <div className="document-query-panel">
+            <div className="document-query-heading">
+              <div className="document-query-title">
+                <span className="document-query-icon"><Filter size={16} /></span>
+                <div>
+                  <strong>Search and filters</strong>
+                  <span>Search by title or words inside a document</span>
+                </div>
+              </div>
+              {(search || legalCategory || documentType) && (
+                <button className="clear-document-filters" type="button" onClick={() => { setSearch(''); setDebouncedSearch(''); setLegalCategory(''); setDocumentType(''); setPage(1) }}>
+                  <X size={14} /> Clear all
+                </button>
+              )}
+            </div>
+            <div className="document-query-controls">
+              <label className="document-search-field">
+                <Search size={17} />
+                <input aria-label="Search document titles and content" value={search} onChange={(event) => { setSearch(event.target.value); setPage(1) }} placeholder="Search by document title or content..." />
+                {search && <button type="button" aria-label="Clear search" onClick={() => { setSearch(''); setPage(1) }}><X size={15} /></button>}
+              </label>
+              <label className="document-filter-field">
+                <span>Legal category</span>
+                <select value={legalCategory} onChange={(event) => { setLegalCategory(event.target.value); setPage(1) }}>
+                  <option value="">All categories</option>
+                  {availableFilters.legal_categories.map((value) => <option key={value} value={value}>{value}</option>)}
+                </select>
+              </label>
+              <label className="document-filter-field">
+                <span>Document type</span>
+                <select value={documentType} onChange={(event) => { setDocumentType(event.target.value); setPage(1) }}>
+                  <option value="">All types</option>
+                  {availableFilters.document_types.map((value) => <option key={value} value={value}>{value}</option>)}
+                </select>
+              </label>
+            </div>
+            <div className="document-query-footer">
+              <span>{isLoading ? 'Updating results…' : `${pagination.total_records} ${pagination.total_records === 1 ? 'document' : 'documents'} found`}</span>
+              <span>Search applies across all pages</span>
+            </div>
           </div>
 
           {error && <p className="alert alert-error" role="alert">{error}</p>}
