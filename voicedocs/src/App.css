@@ -1439,3 +1439,48 @@
   .trash-item-actions { width: 100%; padding-left: 56px; }
   .trash-item-actions button { flex: 1 1 150px; }
 }
+
+
+/* Recoverable formatted-version Trash */
+.version-trash-panel {
+  display: grid;
+  gap: 10px;
+  margin: 0 0 18px;
+  padding: 15px;
+  border: 1px solid #e5e9f2;
+  border-radius: 11px;
+  background: #fafbfe;
+}
+.version-trash-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.version-trash-heading > div { display: grid; gap: 4px; }
+.version-trash-heading strong { color: #344054; font-size: 13px; }
+.version-trash-heading span:not(.document-count), .version-trash-empty {
+  margin: 0;
+  color: #8a94a6;
+  font-size: 11px;
+}
+.version-trash-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 10px;
+  border-top: 1px solid #e8ebf2;
+}
+.version-trash-row > span { color: #667085; font-size: 11px; }
+.version-trash-row > div { display: flex; flex-wrap: wrap; gap: 7px; }
+.version-trash-row .secondary-button, .version-trash-row .danger-button {
+  min-height: 34px;
+  padding: 6px 9px;
+  font-size: 11px;
+}
+@media (max-width: 640px) {
+  .version-trash-row { align-items: flex-start; flex-direction: column; }
+  .version-trash-row > div { width: 100%; }
+  .version-trash-row > div button { flex: 1; }
+}
