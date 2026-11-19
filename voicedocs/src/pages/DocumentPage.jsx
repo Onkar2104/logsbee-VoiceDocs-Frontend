@@ -738,8 +738,7 @@ export default function DocumentPage() {
                   </div>
                 ) : (
                   <>
-                  <p className="legal-jurisdiction-note">Jurisdiction: {new Intl.DisplayNames(['en'], { type: 'region' }).of(jurisdiction || 'IN')}</p>
-                  {jurisdiction !== 'IN' && <p className="settings-warning">Legal drafting templates are currently available for India only. Change your default country in Profile &amp; Settings to India to use legal drafting.</p>}
+                  {jurisdiction !== 'IN' && <p className="settings-warning">Legal drafting templates are currently available for India only. Change your default country in Profile &amp; Settings under Settings to India to use legal drafting.</p>}
                   <label className="legal-drafting-toggle">
                     <input
                       type="checkbox"
