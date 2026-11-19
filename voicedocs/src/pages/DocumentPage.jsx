@@ -283,15 +283,21 @@ export default function DocumentPage() {
     finally { setIsFormatting(false) }
   }
 
-  async function handleContinueLegalDraft() {
+  async function handleContinueLegalDraft(allowPlaceholders = false) {
     if (!legalPreflight || !document?.id) return
     setIsContinuingLegalDraft(true); setError('')
     try {
+      const unansweredRequired = legalPreflight.missing_information.filter((item) => item.importance.startsWith('required') && !(legalPreflightAnswers[item.field] || '').trim())
+      if (unansweredRequired.length && !allowPlaceholders) {
+        setError('Please answer the required questions, or choose Generate with placeholders.')
+        return
+      }
       const answered = legalPreflight.missing_information.map((item) => ({ ...item, answer: (legalPreflightAnswers[item.field] || '').trim() })).filter((item) => item.answer)
-      const additional = answered.map((item) => `- ${item.field}: ${item.answer}`).join('\n')
+      const additional = answered.map((item) => `- ${item.question} ${item.answer}`).join('\n')
       const sourceText = additional ? `${content.trim()}\n\nAdditional details supplied by the user for this draft:\n${additional}` : content
       await generateLegalDraft(sourceText)
       setLegalPreflight(null); setLegalPreflightAnswers({})
+      if (allowPlaceholders && unansweredRequired.length) setNotice('Draft generated with clearly marked missing-information placeholders. Complete and legally review them before use.')
     } catch (draftError) { setError(draftError.response?.data?.detail || draftError.message || 'Could not continue legal drafting.') }
     finally { setIsContinuingLegalDraft(false) }
   }
@@ -605,7 +611,7 @@ export default function DocumentPage() {
               ))}
               <div className="document-sticky-actions">
                 <button type="button" className="primary-button" onClick={() => void handleContinueLegalDraft()} disabled={isContinuingLegalDraft}>{isContinuingLegalDraft ? "Preparing draft…" : "Continue with answers"}</button>
-                <button type="button" className="secondary-button" onClick={() => void handleContinueLegalDraft()} disabled={isContinuingLegalDraft}>Generate with placeholders</button>
+                <button type="button" className="secondary-button" onClick={() => void handleContinueLegalDraft(true)} disabled={isContinuingLegalDraft}>Generate with placeholders</button>
                 <button type="button" className="secondary-button" onClick={() => setLegalPreflight(null)} disabled={isContinuingLegalDraft}>Cancel</button>
               </div>
               <p className="legal-review-note">{legalPreflight.notice}</p>
