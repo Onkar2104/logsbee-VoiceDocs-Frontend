@@ -46,7 +46,6 @@ export default function DocumentPage() {
   const [isLegalCatalogLoading, setIsLegalCatalogLoading] = useState(true)
   const [formattingMode, setFormattingMode] = useState('general')
   const [documentMode, setDocumentMode] = useState('draft')
-  const [legalDraftingMode, setLegalDraftingMode] = useState(true)
   const [legalPreflight, setLegalPreflight] = useState(null)
   const [legalPreflightAnswers, setLegalPreflightAnswers] = useState({})
   const [isLegalDetailsModalOpen, setIsLegalDetailsModalOpen] = useState(false)
@@ -284,7 +283,7 @@ export default function DocumentPage() {
       const savedOriginal = await updateDocument(document.id, { title: title.trim(), content, ...legalMetadata })
       setDocument(savedOriginal); setContent(savedOriginal.content || content)
       await savePendingRecordings(savedOriginal.id)
-      if (formattingMode === 'legal' && legalDraftingMode) {
+      if (formattingMode === 'legal' && documentMode === 'draft') {
         const assessment = await checkLegalDraftCompleteness(document.id)
         if (assessment.status === 'needs_information') { setLegalPreflight(assessment); setLegalPreflightAnswers({}); setNotice('Please review the missing information before drafting.'); return }
       }
