@@ -64,7 +64,7 @@ export default function DocumentPage() {
     legal_category: formattingMode === 'legal' ? legalCategory : null,
     document_type: formattingMode === 'legal' ? legalDocumentType : null,
   }
-  const legalSelectionIsValid = formattingMode === 'general' || Boolean(jurisdiction && legalCategory && legalDocumentType)
+  const legalSelectionIsValid = formattingMode === 'general' || Boolean(jurisdiction === 'IN' && legalCategory && legalDocumentType)
 
   const isAccountAdmin = user?.role?.name?.trim().toLowerCase() === 'admin'
   // A newly opened draft belongs to the current user and must be editable
@@ -712,8 +712,6 @@ export default function DocumentPage() {
                       setJurisdiction(null)
                       setLegalCategory('')
                       setLegalDocumentType('')
-                    } else {
-                      setJurisdiction('IN')
                     }
                   }}
                 >
@@ -739,7 +737,8 @@ export default function DocumentPage() {
                   </div>
                 ) : (
                   <>
-                  <p className="legal-jurisdiction-note">Jurisdiction: India</p>
+                  <p className="legal-jurisdiction-note">Jurisdiction: {new Intl.DisplayNames(['en'], { type: 'region' }).of(jurisdiction || 'IN')}</p>
+                  {jurisdiction !== 'IN' && <p className="settings-warning">Legal drafting templates are currently available for India only. Change your default country in Profile &amp; Settings to India to use legal drafting.</p>}
                   <label className="legal-drafting-toggle">
                     <input
                       type="checkbox"
