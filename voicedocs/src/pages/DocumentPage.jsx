@@ -256,7 +256,7 @@ export default function DocumentPage() {
     }
   }
 
-  async function generateLegalDraft(sourceText, legalDraftDetails = {}) {
+  async function generateLegalDraft(legalDraftDetails = {}) {
     // Keep the original narration unchanged. Intake answers are sent separately.
     const updatedOriginal = await updateDocument(document.id, { title: title.trim(), content, ...legalMetadata })
     setDocument(updatedOriginal)
@@ -288,7 +288,7 @@ export default function DocumentPage() {
         const assessment = await checkLegalDraftCompleteness(document.id)
         if (assessment.status === 'needs_information') { setLegalPreflight(assessment); setLegalPreflightAnswers({}); setNotice('Please review the missing information before drafting.'); return }
       }
-      await generateLegalDraft(savedOriginal.content || content)
+      await generateLegalDraft()
     } catch (formatError) { setError(formatError.response?.data?.detail || formatError.message || 'Could not format this document. Please try again.') }
     finally { setIsFormatting(false) }
   }
@@ -315,7 +315,7 @@ export default function DocumentPage() {
         if (answer) legalDraftDetails[item.field] = answer
         else if (allowPlaceholders) legalDraftDetails[item.field] = placeholderValues[item.field] || '[माहिती उपलब्ध नाही — अंतिम वापरापूर्वी भरा]'
       }
-      await generateLegalDraft(content, legalDraftDetails)
+      await generateLegalDraft(legalDraftDetails)
       setLegalPreflight(null); setLegalPreflightAnswers({}); setIsLegalDetailsModalOpen(false)
       if (allowPlaceholders && Object.values(legalDraftDetails).some((value) => value.startsWith('['))) {
         setNotice('Draft generated with clearly marked missing-information placeholders. Complete and legally review them before use.')
