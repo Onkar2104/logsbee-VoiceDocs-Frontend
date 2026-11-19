@@ -606,8 +606,8 @@ export default function DocumentPage() {
                   <Sparkles size={17} />
                 </button>
               )}
-              {!isNewDocument && canEdit && (activeTab !== 'formatted' || isFormattedContentDirty) && (
-                <button className="icon-button" type="submit" form="document-editor-form" disabled={isSaving || !title.trim() || !legalSelectionIsValid} title={isSaving ? 'Saving document…' : activeTab === 'formatted' ? 'Save formatted document' : 'Save document'} aria-label={activeTab === 'formatted' ? 'Save formatted document' : 'Save document'}>
+              {canEdit && (activeTab !== 'formatted' || isFormattedContentDirty) && (
+                <button className="icon-button" type="submit" form="document-editor-form" disabled={isSaving || !title.trim() || !legalSelectionIsValid} title={isSaving ? 'Saving document…' : activeTab === 'formatted' ? 'Save formatted document' : isNewDocument ? 'Create document' : 'Save document'} aria-label={activeTab === 'formatted' ? 'Save formatted document' : isNewDocument ? 'Create document' : 'Save document'}>
                   <Save size={17} />
                 </button>
               )}
@@ -771,16 +771,16 @@ export default function DocumentPage() {
                   </div>
                   </>
                 )}
+                    {isDocumentTypePanelOpen && !isNewDocument && (
+                      <div className="document-type-change-actions">
+                        <button className="primary-button" type="button" onClick={async () => { try { const updated = await updateDocument(document.id, { title: title.trim(), content, ...legalMetadata }); setDocument(updated); setIsDocumentTypePanelOpen(false); setNotice('Document type and formatting settings updated.') } catch (saveError) { setError(saveError.response?.data?.detail || 'Could not update document type.') } }}>Save Document Type</button>
+                        <button className="secondary-button" type="button" onClick={() => { setFormattingMode(document.formatting_mode || 'general'); setJurisdiction(document.jurisdiction || jurisdiction); setLegalCategory(document.legal_category || ''); setLegalDocumentType(document.document_type || ''); setIsDocumentTypePanelOpen(false) }}>Cancel</button>
+                      </div>
+                    )}
                   </section>
                 </div>
               )}
               {formattingMode === 'legal' && isNewDocument && <p className="legal-review-note">Review the formatted document with a qualified legal professional before use.</p>}
-              {isDocumentTypePanelOpen && !isNewDocument && (
-                <div className="document-type-change-actions">
-                  <button className="primary-button" type="button" onClick={async () => { try { const updated = await updateDocument(document.id, { title: title.trim(), content, ...legalMetadata }); setDocument(updated); setIsDocumentTypePanelOpen(false); setNotice('Document type and formatting settings updated.') } catch (saveError) { setError(saveError.response?.data?.detail || 'Could not update document type.') } }}>Save Document Type</button>
-                  <button className="secondary-button" type="button" onClick={() => { setFormattingMode(document.formatting_mode || 'general'); setJurisdiction(document.jurisdiction || jurisdiction); setLegalCategory(document.legal_category || ''); setLegalDocumentType(document.document_type || ''); setIsDocumentTypePanelOpen(false) }}>Cancel</button>
-                </div>
-              )}
               <label htmlFor="edit-document-title">Document title <span className="required-label">*</span></label>
               <input id="edit-document-title" value={title} onChange={(event) => setTitle(event.target.value)} maxLength={255} required placeholder="Enter a document title" />
               <label htmlFor="edit-document-content">Content</label>
