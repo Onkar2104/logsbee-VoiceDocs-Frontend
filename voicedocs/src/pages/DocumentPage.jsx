@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ArrowLeft, Clock3, Download, FileText, Save, Trash2, Sparkles, History, RotateCcw, ExternalLink } from 'lucide-react'
+import { ArrowLeft, Clock3, Download, FileText, Save, Trash2, Sparkles, History, RotateCcw, ExternalLink, Archive, X } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../context/useAuth'
 import VoiceDictation from '../components/VoiceDictation'
@@ -28,6 +28,7 @@ export default function DocumentPage() {
   const [formattedContent, setFormattedContent] = useState('')
   const [versions, setVersions] = useState([])
   const [deletedVersions, setDeletedVersions] = useState([])
+  const [isVersionTrashOpen, setIsVersionTrashOpen] = useState(false)
   const [selectedVersionId, setSelectedVersionId] = useState(null)
   const [activeVersionId, setActiveVersionId] = useState(null)
   const [activeTab, setActiveTab] = useState('original')
@@ -597,11 +598,11 @@ export default function DocumentPage() {
                 {document.backup_status === 'backed_up' && document.audio_backup_status !== 'not_backed_up' ? 'Backed up to Drive' : 'Backup pending'}
               </span>
             )}
-            {!isNewDocument && document.drive_web_view_link && (
-              <a className="icon-button" href={document.drive_web_view_link} target="_blank" rel="noreferrer" title="Open in Google Drive" aria-label="Open in Google Drive"><ExternalLink size={17} /></a>
-            )}
             <div className="document-toolbar-actions">
-              {!isNewDocument && canEdit && (
+              {!isNewDocument && document.drive_web_view_link && (
+                <a className="icon-button" href={document.drive_web_view_link} target="_blank" rel="noreferrer" title="Open in Google Drive" aria-label="Open in Google Drive"><ExternalLink size={17} /></a>
+              )}
+              {!isNewDocument && canEdit && activeTab !== 'formatted' && (
                 <button className="icon-button" type="button" onClick={handleFormatDocument} disabled={isFormatting || !content.trim() || !legalSelectionIsValid} title={isFormatting ? 'Preparing document…' : formattingMode === 'legal' ? 'Draft legal document' : 'Draft or format document'} aria-label={formattingMode === 'legal' ? 'Draft legal document' : 'Draft or format document'}>
                   <Sparkles size={17} />
                 </button>
@@ -647,6 +648,25 @@ export default function DocumentPage() {
           </div>
           {error && <p className="alert alert-error" role="alert">{error}</p>}
           {notice && <p className="alert alert-success" role="status">{notice}</p>}
+          {isVersionTrashOpen && canManage && (
+            <div className="legal-details-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setIsVersionTrashOpen(false) }}>
+              <section className="legal-details-modal version-trash-modal" role="dialog" aria-modal="true" aria-labelledby="version-trash-title">
+                <div className="legal-details-modal-heading">
+                  <div><h2 id="version-trash-title">Deleted drafts</h2><p>Restore a deleted formatted version or permanently delete it.</p></div>
+                  <button className="legal-details-modal-close" type="button" onClick={() => setIsVersionTrashOpen(false)} aria-label="Close deleted drafts">×</button>
+                </div>
+                {deletedVersions.length === 0 ? <p className="version-trash-empty">No deleted drafts.</p> : deletedVersions.map((version) => (
+                  <div className="version-trash-row" key={version.id}>
+                    <span>Version {version.version_number} · Deleted {formatDate(version.deleted_at)}</span>
+                    <div>
+                      <button className="secondary-button" type="button" onClick={() => void handleRestoreVersion(version.id)} disabled={isSavingVersion}><RotateCcw size={14} /> Restore</button>
+                      <button className="danger-button" type="button" onClick={() => void handlePermanentlyDeleteVersion(version)} disabled={isSavingVersion}><Trash2 size={14} /> Delete permanently</button>
+                    </div>
+                  </div>
+                ))}
+              </section>
+            </div>
+          )}
           {legalPreflight && !isLegalDetailsModalOpen && (
             <div className="legal-details-modal-backdrop" role="presentation">
               <section className="legal-details-modal legal-preflight-choice-modal" role="dialog" aria-modal="true" aria-labelledby="legal-preflight-title">
@@ -715,6 +735,7 @@ export default function DocumentPage() {
                   onChange={(event) => {
                     const nextMode = event.target.value
                     setFormattingMode(nextMode)
+                    if (nextMode === 'legal') setDocumentMode('draft')
                     if (nextMode === 'general') {
                       setLegalCategory('')
                       setLegalDocumentType('')
@@ -744,14 +765,6 @@ export default function DocumentPage() {
                 ) : (
                   <>
                   {jurisdiction !== 'IN' && <p className="settings-warning">Legal drafting templates are currently available for India only. Change your default country in Profile &amp; Settings under Settings to India to use legal drafting.</p>}
-                  <label className="legal-drafting-toggle">
-                    <input
-                      type="checkbox"
-                      checked={documentMode === 'draft'}
-                      onChange={(event) => setDocumentMode(event.target.checked ? 'draft' : 'format')}
-                    />
-                    Draft as a formal legal document
-                  </label>
                   <p className="legal-jurisdiction-note">When enabled, VoiceDocs transforms narration into a formal legal draft while preserving supplied facts. Review the draft with a qualified legal professional.</p>
                   <div className="legal-document-selectors">
                     <div>
@@ -811,31 +824,20 @@ export default function DocumentPage() {
                         {isSavingVersion ? 'Backing up…' : 'Back up formatted version'}
                       </button>
                     )}
-                    {canManage && selectedVersionId && (
-                      <button className="danger-button" type="button" onClick={handleDeleteVersion} disabled={isSavingVersion} title={formattingMode === 'legal' ? 'Delete this formatted legal draft; the original transcript will remain' : 'Move version to Trash'}>
-                        <Trash2 size={15} /> {formattingMode === 'legal' ? 'Delete Draft Legal Document' : 'Move version to Trash'}
-                      </button>
-                    )}
+                    <div className="formatted-version-actions">
+                      {canManage && selectedVersionId && (
+                        <button className="icon-button delete-button" type="button" onClick={handleDeleteVersion} disabled={isSavingVersion} title="Delete draft legal document" aria-label="Delete draft legal document">
+                          <Trash2 size={17} />
+                        </button>
+                      )}
+                      {canManage && (
+                        <button className="icon-button" type="button" onClick={() => setIsVersionTrashOpen(true)} title="View deleted drafts" aria-label="View deleted drafts">
+                          <Archive size={17} />
+                          {deletedVersions.length > 0 && <span className="icon-count">{deletedVersions.length}</span>}
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  {canManage && (
-                    <section className="version-trash-panel">
-                      <div className="version-trash-heading">
-                        <div><strong>Version Trash</strong><span>Deleted formatted versions can be restored here.</span></div>
-                        <span className="document-count">{deletedVersions.length}</span>
-                      </div>
-                      {deletedVersions.length === 0 ? (
-                        <p className="version-trash-empty">No deleted versions.</p>
-                      ) : deletedVersions.map((version) => (
-                        <div className="version-trash-row" key={version.id}>
-                          <span>Version {version.version_number} · Deleted {formatDate(version.deleted_at)}</span>
-                          <div>
-                            <button className="secondary-button" type="button" onClick={() => void handleRestoreVersion(version.id)} disabled={isSavingVersion}><RotateCcw size={14} /> Restore</button>
-                            <button className="danger-button" type="button" onClick={() => void handlePermanentlyDeleteVersion(version)} disabled={isSavingVersion}><Trash2 size={14} /> Delete permanently</button>
-                          </div>
-                        </div>
-                      ))}
-                    </section>
-                  )}
                   <RichTextEditor value={formattedContent} onChange={(value) => { setFormattedContent(value); setIsFormattedContentDirty(true) }} documentMode={formattingMode} />
                   <div className="editor-actions">
                     <span className="editor-hint">The original transcript remains unchanged.</span>
