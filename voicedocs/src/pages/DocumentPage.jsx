@@ -695,8 +695,19 @@ export default function DocumentPage() {
                   <button className="secondary-button" type="button" onClick={() => setIsDocumentTypePanelOpen(true)}>Change Document Type</button>
                 </div>
               )}
-              {(isNewDocument || isDocumentTypePanelOpen) && (<>
-              <div className="document-format-mode-panel">
+              {(isNewDocument || isDocumentTypePanelOpen) && (
+                <div className={isNewDocument ? 'document-type-setup-inline' : 'document-type-modal-backdrop'}>
+                  <section className={isNewDocument ? 'document-format-mode-panel' : 'document-format-mode-panel document-type-modal'} role={isNewDocument ? undefined : 'dialog'} aria-modal={isNewDocument ? undefined : 'true'} aria-labelledby={isNewDocument ? undefined : 'change-document-type-title'}>
+                    {!isNewDocument && (
+                      <div className="document-type-modal-heading">
+                        <div>
+                          <span className="eyebrow">DOCUMENT SETTINGS</span>
+                          <h2 id="change-document-type-title">Change document type</h2>
+                          <p>Choose how VoiceDocs should prepare this document. Your original transcript will remain unchanged.</p>
+                        </div>
+                        <button className="legal-details-modal-close" type="button" onClick={() => setIsDocumentTypePanelOpen(false)} aria-label="Close document type settings">×</button>
+                      </div>
+                    )}
                 <label htmlFor="document-format-mode">Formatting mode</label>
                 <select
                   id="document-format-mode"
@@ -760,15 +771,16 @@ export default function DocumentPage() {
                   </div>
                   </>
                 )}
-              </div>
-              {formattingMode === 'legal' && <p className="legal-review-note">Review the formatted document with a qualified legal professional before use.</p>}
+                  </section>
+                </div>
+              )}
+              {formattingMode === 'legal' && isNewDocument && <p className="legal-review-note">Review the formatted document with a qualified legal professional before use.</p>}
               {isDocumentTypePanelOpen && !isNewDocument && (
                 <div className="document-type-change-actions">
                   <button className="primary-button" type="button" onClick={async () => { try { const updated = await updateDocument(document.id, { title: title.trim(), content, ...legalMetadata }); setDocument(updated); setIsDocumentTypePanelOpen(false); setNotice('Document type and formatting settings updated.') } catch (saveError) { setError(saveError.response?.data?.detail || 'Could not update document type.') } }}>Save Document Type</button>
                   <button className="secondary-button" type="button" onClick={() => { setFormattingMode(document.formatting_mode || 'general'); setJurisdiction(document.jurisdiction || jurisdiction); setLegalCategory(document.legal_category || ''); setLegalDocumentType(document.document_type || ''); setIsDocumentTypePanelOpen(false) }}>Cancel</button>
                 </div>
               )}
-              </>)}
               <label htmlFor="edit-document-title">Document title <span className="required-label">*</span></label>
               <input id="edit-document-title" value={title} onChange={(event) => setTitle(event.target.value)} maxLength={255} required placeholder="Enter a document title" />
               <label htmlFor="edit-document-content">Content</label>
