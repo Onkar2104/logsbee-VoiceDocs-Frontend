@@ -45,6 +45,7 @@ export default function DocumentPage() {
   const [legalCatalog, setLegalCatalog] = useState({ jurisdictions: [], categories: [] })
   const [isLegalCatalogLoading, setIsLegalCatalogLoading] = useState(true)
   const [formattingMode, setFormattingMode] = useState('general')
+  const [documentMode, setDocumentMode] = useState('draft')
   const [legalDraftingMode, setLegalDraftingMode] = useState(true)
   const [legalPreflight, setLegalPreflight] = useState(null)
   const [legalPreflightAnswers, setLegalPreflightAnswers] = useState({})
