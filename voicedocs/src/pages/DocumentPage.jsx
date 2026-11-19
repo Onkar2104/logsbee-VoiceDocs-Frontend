@@ -295,8 +295,10 @@ export default function DocumentPage() {
         return
       }
       const answered = legalPreflight.missing_information.map((item) => ({ ...item, answer: (legalPreflightAnswers[item.field] || '').trim() })).filter((item) => item.answer)
-      const additional = answered.map((item) => `- ${item.question} ${item.answer}`).join('\n')
-      const sourceText = additional ? `${content.trim()}\n\nAdditional details supplied by the user for this draft:\n${additional}` : content
+      const unanswered = legalPreflight.missing_information.filter((item) => !(legalPreflightAnswers[item.field] || '').trim())
+      const additional = answered.map((item) => `- ${item.question} ${item.answer}`)
+      if (allowPlaceholders) additional.push(...unanswered.map((item) => `- ${item.question} [माहिती उपलब्ध नाही — अंतिम वापरापूर्वी भरा]`))
+      const sourceText = additional.length ? `${content.trim()}\n\nAdditional details and explicitly unfilled fields for this legal draft:\n${additional.join('\n')}` : content
       await generateLegalDraft(sourceText)
       setLegalPreflight(null); setLegalPreflightAnswers({})
       if (allowPlaceholders && unansweredRequired.length) setNotice('Draft generated with clearly marked missing-information placeholders. Complete and legally review them before use.')
