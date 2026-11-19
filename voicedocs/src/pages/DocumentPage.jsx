@@ -818,13 +818,11 @@ export default function DocumentPage() {
                     <select id="formatted-version-select" value={selectedVersionId || ''} onChange={(event) => void handleSelectVersion(event.target.value)}>
                       {versions.map((version) => <option key={version.id} value={version.id}>Version {version.version_number} · {formatDate(version.created_at)}</option>)}
                     </select>
-                    <button className="icon-button" type="button" onClick={handleFormatDocument} disabled={isFormatting || !content.trim()} title={isFormatting ? 'Preparing document…' : 'Format again'} aria-label="Format again"><Sparkles size={17} /></button>
-                    {canManage && versions.find((version) => version.id === selectedVersionId)?.backup_status !== 'backed_up' && (
-                      <button className="secondary-button" type="button" onClick={handleBackupFormattedVersion} disabled={isSavingVersion}>
-                        {isSavingVersion ? 'Backing up…' : 'Back up formatted version'}
-                      </button>
-                    )}
                     <div className="formatted-version-actions">
+                      <button className="icon-button" type="button" onClick={handleFormatDocument} disabled={isFormatting || !content.trim()} title={isFormatting ? 'Preparing document…' : 'Format again'} aria-label="Format again"><Sparkles size={17} /></button>
+                      {canManage && versions.find((version) => version.id === selectedVersionId)?.backup_status !== 'backed_up' && (
+                        <button className="icon-button" type="button" onClick={handleBackupFormattedVersion} disabled={isSavingVersion} title={isSavingVersion ? 'Backing up formatted version' : 'Back up formatted version'} aria-label="Back up formatted version"><Save size={17} /></button>
+                      )}
                       {canManage && selectedVersionId && (
                         <button className="icon-button delete-button" type="button" onClick={handleDeleteVersion} disabled={isSavingVersion} title="Delete draft legal document" aria-label="Delete draft legal document">
                           <Trash2 size={17} />
