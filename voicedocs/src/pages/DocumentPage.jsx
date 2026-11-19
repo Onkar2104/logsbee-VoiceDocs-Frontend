@@ -112,6 +112,7 @@ export default function DocumentPage() {
       setTitle(result.title || '')
       setContent(result.content || '')
       setFormattingMode(result.formatting_mode || 'general')
+      setIsFormattedContentDirty(false)
       setDocumentMode('draft')
       setJurisdiction(result.jurisdiction || savedPreferences.jurisdiction_country || 'IN')
       setIsDocumentTypePanelOpen(false)
@@ -284,6 +285,7 @@ export default function DocumentPage() {
     setVersions(versionData.items || [])
     setActiveVersionId(versionData.active_version_id || null)
     setActiveTab('formatted')
+    setIsDocumentTypePanelOpen(false)
     setNotice(result.backup_status === 'backed_up' ? 'Your legal draft is ready and backed up to Google Drive.' : 'Your legal draft is ready and saved in VoiceDocs. A Google Drive backup is pending.')
   }
 
@@ -411,7 +413,7 @@ export default function DocumentPage() {
     if (!canManage || !selectedVersionId) return
     const selected = versions.find((item) => item.id === selectedVersionId)
     if (!selected) return
-    if (!window.confirm(`Move formatted version ${selected.version_number} to Version Trash?`)) return
+    if (!window.confirm(formattingMode === 'legal' ? 'Delete this formatted legal draft? The original transcript will remain available, and this draft can be restored from Version Trash for 30 days.' : `Move formatted version ${selected.version_number} to Version Trash?`)) return
     setIsSavingVersion(true)
     setError('')
     setNotice('')
@@ -433,7 +435,7 @@ export default function DocumentPage() {
         setFormattedContent('')
         setActiveTab('original')
       }
-      setNotice('Formatted version moved to Version Trash.')
+      setNotice(formattingMode === 'legal' ? 'Draft legal document moved to Version Trash. The original transcript is unchanged.' : 'Formatted version moved to Version Trash.')
     } catch (deleteError) {
       setError(deleteError.response?.data?.detail || 'Could not move this version to Trash.')
     } finally {
