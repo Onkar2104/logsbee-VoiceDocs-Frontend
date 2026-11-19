@@ -585,7 +585,7 @@ export default function DocumentPage() {
                   onClick={handleFormatDocument}
                   disabled={isNewDocument || isFormatting || !content.trim() || !legalSelectionIsValid}
                 >
-                  <Sparkles size={16} /> {isFormatting ? 'Formatting…' : formattingMode === 'legal' ? 'Format Legal Document' : 'Format Document'}
+                  <Sparkles size={16} /> {isFormatting ? 'Formatting…' : formattingMode === 'legal' && legalDraftingMode ? 'Draft Legal Document' : formattingMode === 'legal' ? 'Format Legal Document' : 'Format Document'}
                 </button>
                 <button className="primary-button save-button" type="submit" disabled={isSaving || !title.trim() || !legalSelectionIsValid}>
                   <Save size={16} /> {isSaving ? 'Saving…' : activeTab === 'formatted' ? 'Save formatted version' : isNewDocument ? 'Create document' : 'Save document'}
