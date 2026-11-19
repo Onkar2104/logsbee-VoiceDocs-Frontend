@@ -76,10 +76,11 @@ export default function DocumentPage() {
     setIsLoading(true)
     setError('')
     try {
+      let savedPreferences = {}
       try {
-        const preferences = await fetchUserPreferences()
-        setDefaultLanguage(preferences.transcription_language || 'en')
-        setJurisdiction(preferences.jurisdiction_country || 'IN')
+        savedPreferences = await fetchUserPreferences()
+        setDefaultLanguage(savedPreferences.transcription_language || 'en')
+        setJurisdiction(savedPreferences.jurisdiction_country || 'IN')
       } catch (preferencesError) {
         // A preferences endpoint/migration issue must not prevent document access.
         console.warn('Could not load speech preferences; using defaults.', preferencesError)
@@ -689,11 +690,7 @@ export default function DocumentPage() {
                     <Save size={16} /> {isSaving ? 'Saving…' : activeTab === 'formatted' ? 'Save formatted document' : isNewDocument ? 'Create document' : 'Save document'}
                   </button>
                 )}
-                {activeTab === 'formatted' && selectedVersionId && (
-                  <button className="secondary-button" type="button" onClick={handleSaveAsNewVersion} disabled={isSavingVersion || !formattedContent.trim()}>
-                    {isSavingVersion ? 'Saving version…' : 'Save as new version'}
-                  </button>
-                )}
+
               </div>
               {!isNewDocument && !isDocumentTypePanelOpen && (
                 <div className="document-type-change-row">
