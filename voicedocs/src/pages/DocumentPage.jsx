@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ArrowLeft, Clock3, Download, FileText, Save, Trash2, Sparkles, History, RotateCcw } from 'lucide-react'
+import { ArrowLeft, Clock3, Download, FileText, Save, Trash2, Sparkles, History, RotateCcw, ExternalLink } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../context/useAuth'
 import VoiceDictation from '../components/VoiceDictation'
@@ -598,12 +598,22 @@ export default function DocumentPage() {
               </span>
             )}
             {!isNewDocument && document.drive_web_view_link && (
-              <a className="secondary-button" href={document.drive_web_view_link} target="_blank" rel="noreferrer">Open in Google Drive</a>
+              <a className="icon-button" href={document.drive_web_view_link} target="_blank" rel="noreferrer" title="Open in Google Drive" aria-label="Open in Google Drive"><ExternalLink size={17} /></a>
             )}
             <div className="document-toolbar-actions">
+              {!isNewDocument && canEdit && (
+                <button className="icon-button" type="button" onClick={handleFormatDocument} disabled={isFormatting || !content.trim() || !legalSelectionIsValid} title={isFormatting ? 'Preparing document…' : formattingMode === 'legal' ? 'Draft legal document' : 'Draft or format document'} aria-label={formattingMode === 'legal' ? 'Draft legal document' : 'Draft or format document'}>
+                  <Sparkles size={17} />
+                </button>
+              )}
+              {!isNewDocument && canEdit && (activeTab !== 'formatted' || isFormattedContentDirty) && (
+                <button className="icon-button" type="submit" form="document-editor-form" disabled={isSaving || !title.trim() || !legalSelectionIsValid} title={isSaving ? 'Saving document…' : activeTab === 'formatted' ? 'Save formatted document' : 'Save document'} aria-label={activeTab === 'formatted' ? 'Save formatted document' : 'Save document'}>
+                  <Save size={17} />
+                </button>
+              )}
               {!isNewDocument && canManage && (document.backup_status !== 'backed_up' || document.audio_backup_status === 'not_backed_up') && (
-                <button className="secondary-button" type="button" onClick={handleBackup} disabled={isBackingUp}>
-                  {isBackingUp ? 'Backing up…' : 'Back up to Google Drive'}
+                <button className="icon-button" type="button" onClick={handleBackup} disabled={isBackingUp} title={isBackingUp ? 'Backing up to Google Drive' : 'Back up to Google Drive'} aria-label={isBackingUp ? 'Backing up to Google Drive' : 'Back up to Google Drive'}>
+                  <Save size={17} />
                 </button>
               )}
               <div className="document-download-wrap">
@@ -615,7 +625,7 @@ export default function DocumentPage() {
                   aria-haspopup="menu"
                   disabled={Boolean(downloadFormat)}
                 >
-                  <Download size={16} /> {downloadFormat ? 'Preparing…' : 'Download'}
+                  <Download size={17} />
                 </button>
                 {isDownloadMenuOpen && (
                   <div className="document-download-menu" role="menu" aria-label="Choose download format">
@@ -678,23 +688,7 @@ export default function DocumentPage() {
           )}
 
           {canEdit ? (
-            <form onSubmit={handleSave} className="document-editor-form">
-              <div className="document-sticky-actions">
-                <button
-                  className="secondary-button"
-                  type="button"
-                  onClick={handleFormatDocument}
-                  disabled={isNewDocument || isFormatting || !content.trim() || !legalSelectionIsValid}
-                >
-                  <Sparkles size={16} /> {isFormatting ? (documentMode === 'draft' ? 'Drafting…' : 'Formatting…') : formattingMode === 'legal' ? (documentMode === 'draft' ? 'Draft Legal Document' : 'Format Legal Document') : (documentMode === 'draft' ? 'Draft Document' : 'Format Document')}
-                </button>
-                {(activeTab !== 'formatted' || isFormattedContentDirty) && (
-                  <button className="primary-button save-button" type="submit" disabled={isSaving || !title.trim() || !legalSelectionIsValid}>
-                    <Save size={16} /> {isSaving ? 'Saving…' : activeTab === 'formatted' ? 'Save formatted document' : isNewDocument ? 'Create document' : 'Save document'}
-                  </button>
-                )}
-
-              </div>
+            <form id="document-editor-form" onSubmit={handleSave} className="document-editor-form">
               {!isNewDocument && !isDocumentTypePanelOpen && (
                 <div className="document-type-change-row">
                   <span>Document type and formatting preferences are hidden after creation.</span>
