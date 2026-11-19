@@ -19,6 +19,7 @@ export default function DocumentPage() {
   const { documentId } = useParams()
   // /documents/new is currently matched by a static route, so documentId can be undefined.
   const isNewDocument = !documentId || documentId === 'new'
+  const [isDocumentTypePanelOpen, setIsDocumentTypePanelOpen] = useState(isNewDocument)
   const navigate = useNavigate()
   const { user } = useAuth()
   const [document, setDocument] = useState(null)
@@ -32,6 +33,7 @@ export default function DocumentPage() {
   const [activeTab, setActiveTab] = useState('original')
   const [isFormatting, setIsFormatting] = useState(false)
   const [isSavingVersion, setIsSavingVersion] = useState(false)
+  const [isFormattedContentDirty, setIsFormattedContentDirty] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [defaultLanguage, setDefaultLanguage] = useState('en')
   const [isSaving, setIsSaving] = useState(false)
@@ -77,6 +79,7 @@ export default function DocumentPage() {
       try {
         const preferences = await fetchUserPreferences()
         setDefaultLanguage(preferences.transcription_language || 'en')
+        setJurisdiction(preferences.jurisdiction_country || 'IN')
       } catch (preferencesError) {
         // A preferences endpoint/migration issue must not prevent document access.
         console.warn('Could not load speech preferences; using defaults.', preferencesError)
@@ -94,6 +97,8 @@ export default function DocumentPage() {
         setActiveVersionId(null)
         setActiveTab('original')
         setFormattingMode('general')
+        setIsDocumentTypePanelOpen(true)
+        setIsFormattedContentDirty(false)
         setDocumentMode('draft')
         setJurisdiction('IN')
         setLegalCategory('')
@@ -221,6 +226,7 @@ export default function DocumentPage() {
         const audioBackupPending = await savePendingRecordings(updatedOriginal.id)
         const savedVersion = await replaceDocumentVersion(documentId, selectedVersionId, formattedContent)
         setFormattedContent(savedVersion.content_html || formattedContent)
+        setIsFormattedContentDirty(false)
         setSelectedVersionId(savedVersion.id)
         const versionData = await fetchDocumentVersions(documentId)
         setVersions(versionData.items || [])
@@ -247,7 +253,10 @@ export default function DocumentPage() {
       } catch (audioError) {
         setError(audioError.response?.data?.detail || audioError.message || 'The document was saved, but audio upload failed. Your pending audio can be backed up later.')
       }
-      if (isNewDocument) navigate(`/documents/${updated.id}`, { replace: true })
+      if (isNewDocument) {
+        setIsDocumentTypePanelOpen(false)
+        navigate(`/documents/${updated.id}`, { replace: true })
+      }
     } catch (requestError) {
       setError(requestError.response?.data?.detail || 'Could not save your changes.')
     } finally {
@@ -267,6 +276,7 @@ export default function DocumentPage() {
       legal_draft_details: legalDraftDetails,
     })
     setFormattedContent(result.content_html || '')
+    setIsFormattedContentDirty(false)
     setSelectedVersionId(result.id)
     const versionData = await fetchDocumentVersions(document.id)
     setVersions(versionData.items || [])
@@ -285,7 +295,7 @@ export default function DocumentPage() {
       await savePendingRecordings(savedOriginal.id)
       if (formattingMode === 'legal' && documentMode === 'draft') {
         const assessment = await checkLegalDraftCompleteness(document.id)
-        if (assessment.status === 'needs_information') { setLegalPreflight(assessment); setLegalPreflightAnswers({}); setNotice('Please review the missing information before drafting.'); return }
+        if (assessment.status === 'needs_information') { setLegalPreflight(assessment); setLegalPreflightAnswers({}); setIsLegalDetailsModalOpen(false); setNotice(''); return }
       }
       await generateLegalDraft()
     } catch (formatError) { setError(formatError.response?.data?.detail || formatError.message || 'Could not format this document. Please try again.') }
@@ -335,6 +345,7 @@ export default function DocumentPage() {
       const result = await createDocumentVersion(document.id, formattedContent)
       setSelectedVersionId(result.id)
       setFormattedContent(result.content_html || formattedContent)
+      setIsFormattedContentDirty(false)
       const versionData = await fetchDocumentVersions(document.id)
       setVersions(versionData.items || [])
       setActiveVersionId(versionData.active_version_id || null)
@@ -373,6 +384,7 @@ export default function DocumentPage() {
       const selected = await fetchDocumentVersion(document.id, versionId)
       setSelectedVersionId(versionId)
       setFormattedContent(selected.content_html || '')
+      setIsFormattedContentDirty(false)
     } catch (loadError) {
       setError(loadError.response?.data?.detail || 'Could not load that formatted version.')
     }
@@ -386,6 +398,7 @@ export default function DocumentPage() {
       const selected = await fetchDocumentVersion(document.id, versionId)
       setSelectedVersionId(versionId)
       setFormattedContent(selected.content_html || '')
+      setIsFormattedContentDirty(false)
       setNotice(`Loaded formatted version ${selected.version_number}.`)
     } catch (loadError) {
       setError(loadError.response?.data?.detail || 'Could not load that formatted version.')
@@ -620,17 +633,19 @@ export default function DocumentPage() {
           </div>
           {error && <p className="alert alert-error" role="alert">{error}</p>}
           {notice && <p className="alert alert-success" role="status">{notice}</p>}
-          {legalPreflight && (
-            <section className="legal-preflight-panel" aria-labelledby="legal-preflight-title">
-              <h2 id="legal-preflight-title">Missing information before legal drafting</h2>
-              <p>VoiceDocs found details that may be needed. Add the missing details in a separate form, or generate a draft with clearly marked placeholders. This check does not certify legal compliance.</p>
-              <div className="document-sticky-actions">
-                <button type="button" className="primary-button" onClick={() => { setError(''); setIsLegalDetailsModalOpen(true) }} disabled={isContinuingLegalDraft}>Add Missing Details</button>
-                <button type="button" className="secondary-button" onClick={() => void handleContinueLegalDraft(true)} disabled={isContinuingLegalDraft}>{isContinuingLegalDraft ? "Preparing draft…" : "Generate Draft with Placeholders"}</button>
-                <button type="button" className="secondary-button" onClick={() => setLegalPreflight(null)} disabled={isContinuingLegalDraft}>Cancel</button>
-              </div>
-              <p className="legal-review-note">{legalPreflight.notice}</p>
-            </section>
+          {legalPreflight && !isLegalDetailsModalOpen && (
+            <div className="legal-details-modal-backdrop" role="presentation">
+              <section className="legal-details-modal legal-preflight-choice-modal" role="dialog" aria-modal="true" aria-labelledby="legal-preflight-title">
+                <h2 id="legal-preflight-title">Missing information before legal drafting</h2>
+                <p>VoiceDocs found details that may be needed. Add the missing details, or generate a draft with clearly marked placeholders. This check does not certify legal compliance.</p>
+                <div className="document-sticky-actions">
+                  <button type="button" className="primary-button" onClick={() => { setError(''); setIsLegalDetailsModalOpen(true) }} disabled={isContinuingLegalDraft}>Add Missing Details</button>
+                  <button type="button" className="secondary-button" onClick={() => void handleContinueLegalDraft(true)} disabled={isContinuingLegalDraft}>{isContinuingLegalDraft ? "Preparing draft…" : "Generate Draft with Placeholders"}</button>
+                  <button type="button" className="secondary-button" onClick={() => setLegalPreflight(null)} disabled={isContinuingLegalDraft}>Cancel</button>
+                </div>
+                <p className="legal-review-note">{legalPreflight.notice}</p>
+              </section>
+            </div>
           )}
           {legalPreflight && isLegalDetailsModalOpen && (
             <div className="legal-details-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !isContinuingLegalDraft) setIsLegalDetailsModalOpen(false) }}>
@@ -669,15 +684,24 @@ export default function DocumentPage() {
                 >
                   <Sparkles size={16} /> {isFormatting ? (documentMode === 'draft' ? 'Drafting…' : 'Formatting…') : formattingMode === 'legal' ? (documentMode === 'draft' ? 'Draft Legal Document' : 'Format Legal Document') : (documentMode === 'draft' ? 'Draft Document' : 'Format Document')}
                 </button>
-                <button className="primary-button save-button" type="submit" disabled={isSaving || !title.trim() || !legalSelectionIsValid}>
-                  <Save size={16} /> {isSaving ? 'Saving…' : activeTab === 'formatted' ? 'Save formatted version' : isNewDocument ? 'Create document' : 'Save document'}
-                </button>
+                {(activeTab !== 'formatted' || isFormattedContentDirty) && (
+                  <button className="primary-button save-button" type="submit" disabled={isSaving || !title.trim() || !legalSelectionIsValid}>
+                    <Save size={16} /> {isSaving ? 'Saving…' : activeTab === 'formatted' ? 'Save formatted document' : isNewDocument ? 'Create document' : 'Save document'}
+                  </button>
+                )}
                 {activeTab === 'formatted' && selectedVersionId && (
                   <button className="secondary-button" type="button" onClick={handleSaveAsNewVersion} disabled={isSavingVersion || !formattedContent.trim()}>
                     {isSavingVersion ? 'Saving version…' : 'Save as new version'}
                   </button>
                 )}
               </div>
+              {!isNewDocument && !isDocumentTypePanelOpen && (
+                <div className="document-type-change-row">
+                  <span>Document type and formatting preferences are hidden after creation.</span>
+                  <button className="secondary-button" type="button" onClick={() => setIsDocumentTypePanelOpen(true)}>Change Document Type</button>
+                </div>
+              )}
+              {(isNewDocument || isDocumentTypePanelOpen) && (
               <div className="document-format-mode-panel">
                 <label htmlFor="document-format-mode">Formatting mode</label>
                 <select
@@ -747,6 +771,13 @@ export default function DocumentPage() {
                 )}
               </div>
               {formattingMode === 'legal' && <p className="legal-review-note">Review the formatted document with a qualified legal professional before use.</p>}
+              {isDocumentTypePanelOpen && !isNewDocument && (
+                <div className="document-type-change-actions">
+                  <button className="primary-button" type="button" onClick={async () => { try { const updated = await updateDocument(document.id, { title: title.trim(), content, ...legalMetadata }); setDocument(updated); setIsDocumentTypePanelOpen(false); setNotice('Document type and formatting settings updated.') } catch (saveError) { setError(saveError.response?.data?.detail || 'Could not update document type.') } }}>Save Document Type</button>
+                  <button className="secondary-button" type="button" onClick={() => { setFormattingMode(document.formatting_mode || 'general'); setJurisdiction(document.jurisdiction || jurisdiction); setLegalCategory(document.legal_category || ''); setLegalDocumentType(document.document_type || ''); setIsDocumentTypePanelOpen(false) }}>Cancel</button>
+                </div>
+              )}
+              )}
               <label htmlFor="edit-document-title">Document title <span className="required-label">*</span></label>
               <input id="edit-document-title" value={title} onChange={(event) => setTitle(event.target.value)} maxLength={255} required placeholder="Enter a document title" />
               <label htmlFor="edit-document-content">Content</label>
@@ -778,8 +809,8 @@ export default function DocumentPage() {
                       </button>
                     )}
                     {canManage && selectedVersionId && (
-                      <button className="danger-button" type="button" onClick={handleDeleteVersion} disabled={isSavingVersion || selectedVersionId === activeVersionId} title={selectedVersionId === activeVersionId ? 'Select another version before deleting the active version' : 'Move version to Trash'}>
-                        <Trash2 size={15} /> Move version to Trash
+                      <button className="danger-button" type="button" onClick={handleDeleteVersion} disabled={isSavingVersion} title={formattingMode === 'legal' ? 'Delete this formatted legal draft; the original transcript will remain' : 'Move version to Trash'}>
+                        <Trash2 size={15} /> {formattingMode === 'legal' ? 'Delete Draft Legal Document' : 'Move version to Trash'}
                       </button>
                     )}
                   </div>
@@ -802,7 +833,7 @@ export default function DocumentPage() {
                       ))}
                     </section>
                   )}
-                  <RichTextEditor value={formattedContent} onChange={setFormattedContent} documentMode={formattingMode} />
+                  <RichTextEditor value={formattedContent} onChange={(value) => { setFormattedContent(value); setIsFormattedContentDirty(true) }} documentMode={formattingMode} />
                   <div className="editor-actions">
                     <span className="editor-hint">The original transcript remains unchanged.</span>
                   </div>
