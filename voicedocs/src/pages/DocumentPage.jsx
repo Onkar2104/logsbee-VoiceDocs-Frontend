@@ -711,7 +711,6 @@ export default function DocumentPage() {
                     const nextMode = event.target.value
                     setFormattingMode(nextMode)
                     if (nextMode === 'general') {
-                      setJurisdiction(null)
                       setLegalCategory('')
                       setLegalDocumentType('')
                     }
