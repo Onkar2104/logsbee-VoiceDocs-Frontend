@@ -49,6 +49,7 @@ export default function DocumentPage() {
   const [legalDraftingMode, setLegalDraftingMode] = useState(true)
   const [legalPreflight, setLegalPreflight] = useState(null)
   const [legalPreflightAnswers, setLegalPreflightAnswers] = useState({})
+  const [isLegalDetailsModalOpen, setIsLegalDetailsModalOpen] = useState(false)
   const [isContinuingLegalDraft, setIsContinuingLegalDraft] = useState(false)
   const [jurisdiction, setJurisdiction] = useState('IN')
   const [legalCategory, setLegalCategory] = useState('')
@@ -255,11 +256,17 @@ export default function DocumentPage() {
     }
   }
 
-  async function generateLegalDraft(sourceText) {
-    const updatedOriginal = await updateDocument(document.id, { title: title.trim(), content: sourceText, ...legalMetadata })
+  async function generateLegalDraft(sourceText, legalDraftDetails = {}) {
+    // Keep the original narration unchanged. Intake answers are sent separately.
+    const updatedOriginal = await updateDocument(document.id, { title: title.trim(), content, ...legalMetadata })
     setDocument(updatedOriginal)
-    setContent(updatedOriginal.content || sourceText)
-    const result = await formatDocument(document.id, { ...legalMetadata, drafting_mode: formattingMode === 'legal' && legalDraftingMode })
+    setContent(updatedOriginal.content || content)
+    const result = await formatDocument(document.id, {
+      ...legalMetadata,
+      drafting_mode: formattingMode === 'legal' && documentMode === 'draft',
+      document_mode: documentMode,
+      legal_draft_details: legalDraftDetails,
+    })
     setFormattedContent(result.content_html || '')
     setSelectedVersionId(result.id)
     const versionData = await fetchDocumentVersions(document.id)
@@ -290,22 +297,33 @@ export default function DocumentPage() {
     if (!legalPreflight || !document?.id) return
     setIsContinuingLegalDraft(true); setError('')
     try {
+      const placeholderValues = {
+        notice_date: '[नोटीसची तारीख]',
+        recipient_full_address: '[प्राप्तकर्त्याचा संपूर्ण पत्ता व पिनकोड]',
+        sender_full_address: '[पाठविणाऱ्याचा संपूर्ण पत्ता]',
+        dishonour_information_received_date: '[बँकेचा मेमो/अनादराची माहिती मिळाल्याची तारीख]',
+        cheque_validity_confirmation: '[धनादेश वैधता कालावधीतील सादरीकरणाची पुष्टी]',
+      }
       const unansweredRequired = legalPreflight.missing_information.filter((item) => item.importance.startsWith('required') && !(legalPreflightAnswers[item.field] || '').trim())
       if (unansweredRequired.length && !allowPlaceholders) {
-        setError('Please answer the required questions, or choose Generate with placeholders.')
+        setError('Please fill the required details, or choose Generate Draft with Placeholders.')
         return
       }
-      const answered = legalPreflight.missing_information.map((item) => ({ ...item, answer: (legalPreflightAnswers[item.field] || '').trim() })).filter((item) => item.answer)
-      const unanswered = legalPreflight.missing_information.filter((item) => !(legalPreflightAnswers[item.field] || '').trim())
-      const additional = answered.map((item) => `- ${item.question} ${item.answer}`)
-      if (allowPlaceholders) additional.push(...unanswered.map((item) => `- ${item.question} [माहिती उपलब्ध नाही — अंतिम वापरापूर्वी भरा]`))
-      const sourceText = additional.length ? `${content.trim()}\n\nAdditional details and explicitly unfilled fields for this legal draft:\n${additional.join('\n')}` : content
-      await generateLegalDraft(sourceText)
-      setLegalPreflight(null); setLegalPreflightAnswers({})
-      if (allowPlaceholders && unansweredRequired.length) setNotice('Draft generated with clearly marked missing-information placeholders. Complete and legally review them before use.')
+      const legalDraftDetails = {}
+      for (const item of legalPreflight.missing_information) {
+        const answer = (legalPreflightAnswers[item.field] || '').trim()
+        if (answer) legalDraftDetails[item.field] = answer
+        else if (allowPlaceholders) legalDraftDetails[item.field] = placeholderValues[item.field] || '[माहिती उपलब्ध नाही — अंतिम वापरापूर्वी भरा]'
+      }
+      await generateLegalDraft(content, legalDraftDetails)
+      setLegalPreflight(null); setLegalPreflightAnswers({}); setIsLegalDetailsModalOpen(false)
+      if (allowPlaceholders && Object.values(legalDraftDetails).some((value) => value.startsWith('['))) {
+        setNotice('Draft generated with clearly marked missing-information placeholders. Complete and legally review them before use.')
+      }
     } catch (draftError) { setError(draftError.response?.data?.detail || draftError.message || 'Could not continue legal drafting.') }
     finally { setIsContinuingLegalDraft(false) }
   }
+
   async function handleSaveAsNewVersion() {
     if (!document?.id || document.id === 'new' || !formattedContent.trim()) return
     setIsSavingVersion(true)
@@ -606,22 +624,41 @@ export default function DocumentPage() {
           {legalPreflight && (
             <section className="legal-preflight-panel" aria-labelledby="legal-preflight-title">
               <h2 id="legal-preflight-title">Missing information before legal drafting</h2>
-              <p>VoiceDocs found details that may be needed. Answer what you can, or generate a draft with clearly marked placeholders. This check does not certify legal compliance.</p>
-              {legalPreflight.missing_information.map((item) => (
-                <div className="legal-preflight-question" key={item.field}>
-                  <label htmlFor={`legal-preflight-${item.field}`}>{item.question}</label>
-                  <p>{item.reason}</p>
-                  <input id={`legal-preflight-${item.field}`} value={legalPreflightAnswers[item.field] || ''} onChange={(event) => setLegalPreflightAnswers((current) => ({ ...current, [item.field]: event.target.value }))} placeholder="Enter details, if available" />
-                </div>
-              ))}
+              <p>VoiceDocs found details that may be needed. Add the missing details in a separate form, or generate a draft with clearly marked placeholders. This check does not certify legal compliance.</p>
               <div className="document-sticky-actions">
-                <button type="button" className="primary-button" onClick={() => void handleContinueLegalDraft()} disabled={isContinuingLegalDraft}>{isContinuingLegalDraft ? "Preparing draft…" : "Continue with answers"}</button>
-                <button type="button" className="secondary-button" onClick={() => void handleContinueLegalDraft(true)} disabled={isContinuingLegalDraft}>Generate with placeholders</button>
+                <button type="button" className="primary-button" onClick={() => { setError(''); setIsLegalDetailsModalOpen(true) }} disabled={isContinuingLegalDraft}>Add Missing Details</button>
+                <button type="button" className="secondary-button" onClick={() => void handleContinueLegalDraft(true)} disabled={isContinuingLegalDraft}>{isContinuingLegalDraft ? "Preparing draft…" : "Generate Draft with Placeholders"}</button>
                 <button type="button" className="secondary-button" onClick={() => setLegalPreflight(null)} disabled={isContinuingLegalDraft}>Cancel</button>
               </div>
               <p className="legal-review-note">{legalPreflight.notice}</p>
             </section>
           )}
+          {legalPreflight && isLegalDetailsModalOpen && (
+            <div className="legal-details-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !isContinuingLegalDraft) setIsLegalDetailsModalOpen(false) }}>
+              <section className="legal-details-modal" role="dialog" aria-modal="true" aria-labelledby="legal-details-modal-title">
+                <div className="legal-details-modal-heading">
+                  <div>
+                    <h2 id="legal-details-modal-title">Add missing legal details</h2>
+                    <p>Fill in the information you know. You can leave unknown fields blank.</p>
+                  </div>
+                  <button type="button" className="legal-details-modal-close" onClick={() => setIsLegalDetailsModalOpen(false)} disabled={isContinuingLegalDraft} aria-label="Close">×</button>
+                </div>
+                {legalPreflight.missing_information.map((item) => (
+                  <div className="legal-preflight-question" key={item.field}>
+                    <label htmlFor={`legal-preflight-${item.field}`}>{item.question}</label>
+                    <p>{item.reason}</p>
+                    <input id={`legal-preflight-${item.field}`} value={legalPreflightAnswers[item.field] || ''} onChange={(event) => setLegalPreflightAnswers((current) => ({ ...current, [item.field]: event.target.value }))} placeholder="Enter details, if available" />
+                  </div>
+                ))}
+                {error && <p className="alert alert-error" role="alert">{error}</p>}
+                <div className="document-sticky-actions">
+                  <button type="button" className="primary-button" onClick={() => void handleContinueLegalDraft()} disabled={isContinuingLegalDraft}>{isContinuingLegalDraft ? "Generating draft…" : "Generate Legal Draft"}</button>
+                  <button type="button" className="secondary-button" onClick={() => setIsLegalDetailsModalOpen(false)} disabled={isContinuingLegalDraft}>Back</button>
+                </div>
+              </section>
+            </div>
+          )}
+
           {canEdit ? (
             <form onSubmit={handleSave} className="document-editor-form">
               <div className="document-sticky-actions">
