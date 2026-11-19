@@ -6,7 +6,7 @@ import VoiceDictation from '../components/VoiceDictation'
 import RichTextEditor from '../components/RichTextEditor'
 import WorkspaceSidebar from '../components/WorkspaceSidebar'
 import { downloadDocumentPdf, downloadBlobFile } from '../features/documents/documentExport'
-import { backupDocument, createDocument, deleteDocument, fetchDocument, requestDocumentEditAccess, updateDocument, formatDocument, fetchDocumentVersions, fetchDocumentVersion, replaceDocumentVersion, createDocumentVersion, backupDocumentVersion, exportDocumentDocx, fetchLegalDocumentCatalog, fetchDeletedDocumentVersions, deleteDocumentVersion, restoreDocumentVersion, permanentlyDeleteDocumentVersion } from '../features/documents/documentsApi'
+import { backupDocument, createDocument, deleteDocument, fetchDocument, requestDocumentEditAccess, updateDocument, formatDocument, checkLegalDraftCompleteness, fetchDocumentVersions, fetchDocumentVersion, replaceDocumentVersion, createDocumentVersion, backupDocumentVersion, exportDocumentDocx, fetchLegalDocumentCatalog, fetchDeletedDocumentVersions, deleteDocumentVersion, restoreDocumentVersion, permanentlyDeleteDocumentVersion } from '../features/documents/documentsApi'
 import { fetchUserPreferences } from '../features/current-user/preferencesApi'
 import { uploadBrowserRecording } from '../features/recordings/recordingsApi'
 
@@ -46,6 +46,9 @@ export default function DocumentPage() {
   const [isLegalCatalogLoading, setIsLegalCatalogLoading] = useState(true)
   const [formattingMode, setFormattingMode] = useState('general')
   const [legalDraftingMode, setLegalDraftingMode] = useState(true)
+  const [legalPreflight, setLegalPreflight] = useState(null)
+  const [legalPreflightAnswers, setLegalPreflightAnswers] = useState({})
+  const [isContinuingLegalDraft, setIsContinuingLegalDraft] = useState(false)
   const [jurisdiction, setJurisdiction] = useState('IN')
   const [legalCategory, setLegalCategory] = useState('')
   const [legalDocumentType, setLegalDocumentType] = useState('')
@@ -249,37 +252,49 @@ export default function DocumentPage() {
     }
   }
 
+  async function generateLegalDraft(sourceText) {
+    const updatedOriginal = await updateDocument(document.id, { title: title.trim(), content: sourceText, ...legalMetadata })
+    setDocument(updatedOriginal)
+    setContent(updatedOriginal.content || sourceText)
+    const result = await formatDocument(document.id, { ...legalMetadata, drafting_mode: formattingMode === 'legal' && legalDraftingMode })
+    setFormattedContent(result.content_html || '')
+    setSelectedVersionId(result.id)
+    const versionData = await fetchDocumentVersions(document.id)
+    setVersions(versionData.items || [])
+    setActiveVersionId(versionData.active_version_id || null)
+    setActiveTab('formatted')
+    setNotice(result.backup_status === 'backed_up' ? 'Your legal draft is ready and backed up to Google Drive.' : 'Your legal draft is ready and saved in VoiceDocs. A Google Drive backup is pending.')
+  }
+
   async function handleFormatDocument() {
     if (!document?.id || document.id === 'new') return
-    setIsFormatting(true)
-    setError('')
-    setNotice('')
+    setIsFormatting(true); setError(''); setNotice(''); setLegalPreflight(null)
     try {
       if (!legalSelectionIsValid) throw new Error('Select a legal category and document type before formatting.')
       const savedOriginal = await updateDocument(document.id, { title: title.trim(), content, ...legalMetadata })
-      setDocument(savedOriginal)
-      setContent(savedOriginal.content || content)
-      const audioBackupPending = await savePendingRecordings(savedOriginal.id)
-      const result = await formatDocument(document.id, {
-        ...legalMetadata,
-        drafting_mode: formattingMode === 'legal' && legalDraftingMode,
-      })
-      setFormattedContent(result.content_html || '')
-      setSelectedVersionId(result.id)
-      const versionData = await fetchDocumentVersions(document.id)
-      setVersions(versionData.items || [])
-      setActiveVersionId(versionData.active_version_id || null)
-      setActiveTab('formatted')
-      setNotice(result.backup_status === 'backed_up' && !audioBackupPending
-        ? 'Your formatted document is ready and backed up to Google Drive.'
-        : 'Your formatted document is ready and saved in VoiceDocs. A Google Drive backup is pending.')
-    } catch (formatError) {
-      setError(formatError.response?.data?.detail || 'Could not format this document. Please try again.')
-    } finally {
-      setIsFormatting(false)
-    }
+      setDocument(savedOriginal); setContent(savedOriginal.content || content)
+      await savePendingRecordings(savedOriginal.id)
+      if (formattingMode === 'legal' && legalDraftingMode) {
+        const assessment = await checkLegalDraftCompleteness(document.id)
+        if (assessment.status === 'needs_information') { setLegalPreflight(assessment); setLegalPreflightAnswers({}); setNotice('Please review the missing information before drafting.'); return }
+      }
+      await generateLegalDraft(savedOriginal.content || content)
+    } catch (formatError) { setError(formatError.response?.data?.detail || formatError.message || 'Could not format this document. Please try again.') }
+    finally { setIsFormatting(false) }
   }
 
+  async function handleContinueLegalDraft() {
+    if (!legalPreflight || !document?.id) return
+    setIsContinuingLegalDraft(true); setError('')
+    try {
+      const answered = legalPreflight.missing_information.map((item) => ({ ...item, answer: (legalPreflightAnswers[item.field] || '').trim() })).filter((item) => item.answer)
+      const additional = answered.map((item) => `- ${item.field}: ${item.answer}`).join('\n')
+      const sourceText = additional ? `${content.trim()}\n\nAdditional details supplied by the user for this draft:\n${additional}` : content
+      await generateLegalDraft(sourceText)
+      setLegalPreflight(null); setLegalPreflightAnswers({})
+    } catch (draftError) { setError(draftError.response?.data?.detail || draftError.message || 'Could not continue legal drafting.') }
+    finally { setIsContinuingLegalDraft(false) }
+  }
   async function handleSaveAsNewVersion() {
     if (!document?.id || document.id === 'new' || !formattedContent.trim()) return
     setIsSavingVersion(true)
@@ -577,6 +592,25 @@ export default function DocumentPage() {
           </div>
           {error && <p className="alert alert-error" role="alert">{error}</p>}
           {notice && <p className="alert alert-success" role="status">{notice}</p>}
+          {legalPreflight && (
+            <section className="legal-preflight-panel" aria-labelledby="legal-preflight-title">
+              <h2 id="legal-preflight-title">Missing information before legal drafting</h2>
+              <p>VoiceDocs found details that may be needed. Answer what you can, or generate a draft with clearly marked placeholders. This check does not certify legal compliance.</p>
+              {legalPreflight.missing_information.map((item) => (
+                <div className="legal-preflight-question" key={item.field}>
+                  <label htmlFor={`legal-preflight-${item.field}`}>{item.question}</label>
+                  <p>{item.reason}</p>
+                  <input id={`legal-preflight-${item.field}`} value={legalPreflightAnswers[item.field] || ''} onChange={(event) => setLegalPreflightAnswers((current) => ({ ...current, [item.field]: event.target.value }))} placeholder="Enter details, if available" />
+                </div>
+              ))}
+              <div className="document-sticky-actions">
+                <button type="button" className="primary-button" onClick={() => void handleContinueLegalDraft()} disabled={isContinuingLegalDraft}>{isContinuingLegalDraft ? "Preparing draft…" : "Continue with answers"}</button>
+                <button type="button" className="secondary-button" onClick={() => void handleContinueLegalDraft()} disabled={isContinuingLegalDraft}>Generate with placeholders</button>
+                <button type="button" className="secondary-button" onClick={() => setLegalPreflight(null)} disabled={isContinuingLegalDraft}>Cancel</button>
+              </div>
+              <p className="legal-review-note">{legalPreflight.notice}</p>
+            </section>
+          )}
           {canEdit ? (
             <form onSubmit={handleSave} className="document-editor-form">
               <div className="document-sticky-actions">
