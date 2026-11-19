@@ -1586,3 +1586,94 @@
   .legal-preflight-choice-modal .document-sticky-actions { flex-direction: column; }
   .legal-preflight-choice-modal .document-sticky-actions button { width: 100%; }
 }
+
+
+/* Document workspace: compact, consistent icon action strip */
+.document-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.document-toolbar-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid #e6eaf0;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+.document-toolbar-actions .icon-button,
+.document-toolbar-actions .document-download-button {
+  display: inline-grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  color: #344054;
+  background: transparent;
+  cursor: pointer;
+  text-decoration: none;
+}
+.document-toolbar-actions .icon-button:hover,
+.document-toolbar-actions .document-download-button:hover {
+  color: #175cd3;
+  border-color: #d0d5dd;
+  background: #fff;
+}
+.document-toolbar-actions .icon-button:disabled,
+.document-toolbar-actions .document-download-button:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+.document-toolbar-actions .delete-button {
+  color: #b42318;
+}
+.document-toolbar-actions .delete-button:hover {
+  color: #b42318;
+  background: #fef3f2;
+  border-color: #fecdca;
+}
+.document-toolbar-actions .document-download-wrap { position: relative; }
+.document-type-change-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 18px 0;
+  padding: 16px 18px;
+  border: 1px solid #dbe4f0;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #f8fbff, #f3f6fb);
+}
+.document-type-change-row span { color: #475467; font-size: 13px; line-height: 1.5; }
+.document-format-mode-panel {
+  margin: 18px 0;
+  padding: 22px;
+  border: 1px solid #d8e1ee;
+  border-radius: 16px;
+  background: #fbfcfe;
+  box-shadow: 0 8px 24px rgba(16, 24, 40, .06);
+}
+.document-type-change-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin: 18px 0 8px;
+  padding-top: 16px;
+  border-top: 1px solid #eaecf0;
+}
+@media (max-width: 640px) {
+  .document-toolbar { align-items: flex-start; }
+  .document-toolbar-actions { width: 100%; justify-content: space-around; }
+  .document-type-change-row { align-items: stretch; flex-direction: column; }
+  .document-format-mode-panel { padding: 16px; }
+  .document-type-change-actions { flex-direction: column; }
+  .document-type-change-actions button { width: 100%; }
+}
