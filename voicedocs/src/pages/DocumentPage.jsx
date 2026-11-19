@@ -45,6 +45,7 @@ export default function DocumentPage() {
   const [legalCatalog, setLegalCatalog] = useState({ jurisdictions: [], categories: [] })
   const [isLegalCatalogLoading, setIsLegalCatalogLoading] = useState(true)
   const [formattingMode, setFormattingMode] = useState('general')
+  const [legalDraftingMode, setLegalDraftingMode] = useState(true)
   const [jurisdiction, setJurisdiction] = useState('IN')
   const [legalCategory, setLegalCategory] = useState('')
   const [legalDocumentType, setLegalDocumentType] = useState('')
@@ -259,7 +260,10 @@ export default function DocumentPage() {
       setDocument(savedOriginal)
       setContent(savedOriginal.content || content)
       const audioBackupPending = await savePendingRecordings(savedOriginal.id)
-      const result = await formatDocument(document.id)
+      const result = await formatDocument(document.id, {
+        ...legalMetadata,
+        drafting_mode: formattingMode === 'legal' && legalDraftingMode,
+      })
       setFormattedContent(result.content_html || '')
       setSelectedVersionId(result.id)
       const versionData = await fetchDocumentVersions(document.id)
@@ -582,7 +586,7 @@ export default function DocumentPage() {
                   onClick={handleFormatDocument}
                   disabled={isNewDocument || isFormatting || !content.trim() || !legalSelectionIsValid}
                 >
-                  <Sparkles size={16} /> {isFormatting ? 'Formatting…' : formattingMode === 'legal' ? 'Format Legal Document' : 'Format Document'}
+                  <Sparkles size={16} /> {isFormatting ? 'Formatting…' : formattingMode === 'legal' && legalDraftingMode ? 'Draft Legal Document' : formattingMode === 'legal' ? 'Format Legal Document' : 'Format Document'}
                 </button>
                 <button className="primary-button save-button" type="submit" disabled={isSaving || !title.trim() || !legalSelectionIsValid}>
                   <Save size={16} /> {isSaving ? 'Saving…' : activeTab === 'formatted' ? 'Save formatted version' : isNewDocument ? 'Create document' : 'Save document'}
@@ -616,6 +620,15 @@ export default function DocumentPage() {
                 {formattingMode === 'legal' && (
                   <>
                   <p className="legal-jurisdiction-note">Jurisdiction: India</p>
+                  <label className="legal-drafting-toggle">
+                    <input
+                      type="checkbox"
+                      checked={legalDraftingMode}
+                      onChange={(event) => setLegalDraftingMode(event.target.checked)}
+                    />
+                    Draft as a formal legal document
+                  </label>
+                  <p className="legal-jurisdiction-note">When enabled, VoiceDocs rewrites narration into formal legal language while preserving the supplied facts. Review the draft with a qualified legal professional.</p>
                   <div className="legal-document-selectors">
                     <div>
                       <label htmlFor="legal-category">Legal Category</label>
