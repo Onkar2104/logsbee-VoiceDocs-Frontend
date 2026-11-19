@@ -1566,3 +1566,23 @@
   .legal-details-modal { padding: 17px; max-height: 94vh; }
   .legal-details-modal .document-sticky-actions { bottom: -17px; margin: 16px -17px -17px; padding: 12px 17px; }
 }
+
+
+/* Compact document type controls and full-screen legal preflight */
+.document-type-change-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  margin: 8px 0 18px; padding: 12px 14px; border: 1px solid #e6eaf1;
+  border-radius: 10px; background: #fafbfe;
+}
+.document-type-change-row span { color: #667085; font-size: 12px; }
+.document-type-change-actions { display: flex; flex-wrap: wrap; gap: 9px; margin: 0 0 16px; }
+.legal-preflight-choice-modal { width: min(560px, 100%); }
+.legal-preflight-choice-modal h2 { margin: 0 0 10px; color: #263248; font-size: 20px; }
+.legal-preflight-choice-modal > p { color: #667085; font-size: 13px; line-height: 1.65; }
+.legal-preflight-choice-modal .document-sticky-actions { display: flex; flex-wrap: wrap; gap: 9px; position: static; margin: 20px 0 0; padding: 0; border: 0; }
+@media (max-width: 560px) {
+  .document-type-change-row { align-items: stretch; flex-direction: column; }
+  .document-type-change-row button { width: 100%; }
+  .legal-preflight-choice-modal .document-sticky-actions { flex-direction: column; }
+  .legal-preflight-choice-modal .document-sticky-actions button { width: 100%; }
+}
