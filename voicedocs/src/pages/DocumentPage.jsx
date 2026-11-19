@@ -102,6 +102,7 @@ export default function DocumentPage() {
       setTitle(result.title || '')
       setContent(result.content || '')
       setFormattingMode(result.formatting_mode || 'general')
+      setDocumentMode('draft')
       setJurisdiction(result.jurisdiction || 'IN')
       setLegalCategory(result.legal_category || '')
       setLegalDocumentType(result.document_type || '')
