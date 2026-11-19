@@ -701,7 +701,7 @@ export default function DocumentPage() {
                   <button className="secondary-button" type="button" onClick={() => setIsDocumentTypePanelOpen(true)}>Change Document Type</button>
                 </div>
               )}
-              {(isNewDocument || isDocumentTypePanelOpen) && (
+              {(isNewDocument || isDocumentTypePanelOpen) && (<>
               <div className="document-format-mode-panel">
                 <label htmlFor="document-format-mode">Formatting mode</label>
                 <select
@@ -774,7 +774,7 @@ export default function DocumentPage() {
                   <button className="secondary-button" type="button" onClick={() => { setFormattingMode(document.formatting_mode || 'general'); setJurisdiction(document.jurisdiction || jurisdiction); setLegalCategory(document.legal_category || ''); setLegalDocumentType(document.document_type || ''); setIsDocumentTypePanelOpen(false) }}>Cancel</button>
                 </div>
               )}
-              )}
+              </>)}
               <label htmlFor="edit-document-title">Document title <span className="required-label">*</span></label>
               <input id="edit-document-title" value={title} onChange={(event) => setTitle(event.target.value)} maxLength={255} required placeholder="Enter a document title" />
               <label htmlFor="edit-document-content">Content</label>
