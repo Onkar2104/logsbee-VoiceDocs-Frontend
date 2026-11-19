@@ -261,6 +261,7 @@ export default function DocumentPage() {
       setContent(savedOriginal.content || content)
       const audioBackupPending = await savePendingRecordings(savedOriginal.id)
       const result = await formatDocument(document.id, {
+        ...legalMetadata,
         drafting_mode: formattingMode === 'legal' && legalDraftingMode,
       })
       setFormattedContent(result.content_html || '')
