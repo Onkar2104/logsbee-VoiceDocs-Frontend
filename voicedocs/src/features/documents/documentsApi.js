@@ -49,7 +49,12 @@ export async function fetchSharingSummary() {
   return response.data
 }
 
-export async function checkLegalDraftCompleteness(documentId) {\n  const response = await api.post(`/documents/${documentId}/legal-draft-preflight`)\n  return response.data\n}\n\nexport async function formatDocument(documentId, options = {}) {
+export async function checkLegalDraftCompleteness(documentId) {
+  const response = await api.post(`/documents/${documentId}/legal-draft-preflight`)
+  return response.data
+}
+
+export async function formatDocument(documentId, options = {}) {
   // Formatting may take longer than the normal 15-second API timeout.
   // Keep the request open long enough for the backend's longer model timeout and retry window.
   const response = await api.post(`/documents/${documentId}/format`, options, { timeout: 750000 })
