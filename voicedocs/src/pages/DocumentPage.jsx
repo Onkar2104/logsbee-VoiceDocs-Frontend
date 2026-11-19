@@ -101,7 +101,7 @@ export default function DocumentPage() {
         setIsDocumentTypePanelOpen(true)
         setIsFormattedContentDirty(false)
         setDocumentMode('draft')
-        setJurisdiction('IN')
+        setJurisdiction(savedPreferences.jurisdiction_country || 'IN')
         setLegalCategory('')
         setLegalDocumentType('')
         return
@@ -113,7 +113,8 @@ export default function DocumentPage() {
       setContent(result.content || '')
       setFormattingMode(result.formatting_mode || 'general')
       setDocumentMode('draft')
-      setJurisdiction(result.jurisdiction || 'IN')
+      setJurisdiction(result.jurisdiction || savedPreferences.jurisdiction_country || 'IN')
+      setIsDocumentTypePanelOpen(false)
       setLegalCategory(result.legal_category || '')
       setLegalDocumentType(result.document_type || '')
       setActiveTab('original')
