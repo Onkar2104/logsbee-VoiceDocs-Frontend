@@ -12,6 +12,8 @@
   pointer-events: none;
 }
 .voicedocs-notification-dock > * { pointer-events: auto; }
+.voicedocs-notification-dock { position: fixed; isolation: isolate; }
+.voicedocs-notification-history { position: absolute; right: 0; bottom: 57px; z-index: 5; }
 .voicedocs-draft-wrap { position: relative; width: 100%; }
 .voicedocs-draft-card {
   display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px;
@@ -31,7 +33,7 @@
   padding: 18px; margin: 0 0 4px; border: 1px solid var(--border, #d8dee9); border-radius: 14px;
   background: var(--surface, #fff); color: var(--text-primary, #172033);
   box-shadow: 0 14px 36px rgba(15,23,42,.18); opacity: 0; visibility: hidden;
-  transform: translateY(5px); transition: opacity .16s ease, transform .16s ease, visibility .16s ease;
+  margin-bottom: 14px; transform: translateY(5px); transition: opacity .16s ease, transform .16s ease, visibility .16s ease;
   pointer-events: none;
 }
 .voicedocs-draft-wrap:hover .voicedocs-draft-hover-details,
@@ -76,7 +78,7 @@
   border-radius: 99px; color: #fff; background: #dc4545; font-size: 9px; font-weight: 700;
 }
 .voicedocs-notification-history {
-  position: absolute; right: 0; bottom: 57px; display: flex; flex-direction: column;
+  position: absolute; right: 0; bottom: 57px; z-index: 5; display: flex; flex-direction: column;
   width: 100%; max-height: min(390px, 55vh); overflow: hidden;
   border: 1px solid var(--border, #d8dee9); border-radius: 13px; background: var(--surface, #fff);
   color: var(--text-primary, #172033); box-shadow: 0 14px 36px rgba(15,23,42,.2);
