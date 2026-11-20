@@ -12,22 +12,22 @@ import { uploadBrowserRecording } from '../features/recordings/recordingsApi'
 
 
 function InlineLoading({ title, detail, progress }) {
+  const activityId = useRef(`document-activity-${Math.random().toString(36).slice(2)}`)
   const hasProgress = Number.isFinite(progress)
-  return (
-    <div className={hasProgress ? "inline-loading-panel inline-loading-progress-panel" : "inline-loading-panel"} role="status" aria-live="polite">
-      <div className="inline-loading-heading">
-        <LoaderCircle className="app-loading-spinner" size={19} />
-        <strong>{title}</strong>
-        {hasProgress && <strong className="inline-loading-percent">{Math.round(progress)}%</strong>}
-      </div>
-      {detail && <p>{detail}</p>}
-      {hasProgress && (
-        <div className="app-loading-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow={Math.round(progress)}>
-          <span style={{ width: `${Math.min(100, Math.max(0, progress))}%` }} />
-        </div>
-      )}
-    </div>
-  )
+
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('voicedocs:activity-updated', {
+      detail: { id: activityId.current, title, message: detail || '', progress: hasProgress ? progress : null },
+    }))
+  }, [title, detail, progress, hasProgress])
+
+  useEffect(() => () => {
+    window.dispatchEvent(new CustomEvent('voicedocs:activity-finished', {
+      detail: { id: activityId.current },
+    }))
+  }, [])
+
+  return null
 }
 
 function formatDate(value) {
