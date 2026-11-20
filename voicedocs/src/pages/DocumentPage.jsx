@@ -12,22 +12,22 @@ import { uploadBrowserRecording } from '../features/recordings/recordingsApi'
 
 
 function InlineLoading({ title, detail, progress }) {
+  const activityId = useRef(`document-activity-${Math.random().toString(36).slice(2)}`)
   const hasProgress = Number.isFinite(progress)
-  return (
-    <div className={hasProgress ? "inline-loading-panel inline-loading-progress-panel" : "inline-loading-panel"} role="status" aria-live="polite">
-      <div className="inline-loading-heading">
-        <LoaderCircle className="app-loading-spinner" size={19} />
-        <strong>{title}</strong>
-        {hasProgress && <strong className="inline-loading-percent">{Math.round(progress)}%</strong>}
-      </div>
-      {detail && <p>{detail}</p>}
-      {hasProgress && (
-        <div className="app-loading-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow={Math.round(progress)}>
-          <span style={{ width: `${Math.min(100, Math.max(0, progress))}%` }} />
-        </div>
-      )}
-    </div>
-  )
+
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('voicedocs:activity-updated', {
+      detail: { id: activityId.current, title, message: detail || '', progress: hasProgress ? progress : null },
+    }))
+  }, [title, detail, progress, hasProgress])
+
+  useEffect(() => () => {
+    window.dispatchEvent(new CustomEvent('voicedocs:activity-finished', {
+      detail: { id: activityId.current },
+    }))
+  }, [])
+
+  return null
 }
 
 function formatDate(value) {
@@ -63,6 +63,24 @@ export default function DocumentPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
+
+  useEffect(() => {
+    if (error) {
+      window.dispatchEvent(new CustomEvent('voicedocs:notification', {
+        detail: { type: 'error', title: 'Something went wrong', message: error, documentId: document?.id, documentTitle: title.trim() || document?.title || '' },
+      }))
+      setError('')
+    }
+  }, [error, document?.id, document?.title, title])
+
+  useEffect(() => {
+    if (notice) {
+      window.dispatchEvent(new CustomEvent('voicedocs:notification', {
+        detail: { type: 'success', title: notice, documentId: document?.id, documentTitle: title.trim() || document?.title || '' },
+      }))
+      setNotice('')
+    }
+  }, [notice, document?.id, document?.title, title])
   const [isRequestingAccess, setIsRequestingAccess] = useState(false)
   const [isDownloadMenuOpen, setIsDownloadMenuOpen] = useState(false)
   const [downloadFormat, setDownloadFormat] = useState('')
@@ -80,6 +98,7 @@ export default function DocumentPage() {
   const [legalCategory, setLegalCategory] = useState('')
   const [legalDocumentType, setLegalDocumentType] = useState('')
   const contentTextareaRef = useRef(null)
+  const draftFinishedEventRef = useRef(false)
 
   const selectedLegalCategory = legalCatalog.categories.find((item) => item.id === legalCategory)
   const legalMetadata = {
@@ -291,51 +310,83 @@ export default function DocumentPage() {
     }
   }
 
+  function publishDraftProgress(progress, message) {
+    setDraftProgress(progress)
+    setDraftProgressMessage(message)
+    window.dispatchEvent(new CustomEvent('voicedocs:legal-draft-progress', {
+      detail: { documentId: document?.id, title: title.trim() || document?.title || 'Preparing legal document', progress, message },
+    }))
+  }
+
   async function generateLegalDraft(legalDraftDetails = {}) {
+    draftFinishedEventRef.current = false
+    window.dispatchEvent(new CustomEvent('voicedocs:legal-draft-started', {
+      detail: { documentId: document.id, title: title.trim() || document.title || 'Preparing legal document', progress: 60, message: 'Starting legal draft preparation…' },
+    }))
     // Keep the original narration unchanged. Intake answers are sent separately.
-    setDraftProgress(62); setDraftProgressMessage('Saving your original transcript…')
+    publishDraftProgress(62, 'Saving your original transcript…')
     const updatedOriginal = await updateDocument(document.id, { title: title.trim(), content, ...legalMetadata })
     setDocument(updatedOriginal)
     setContent(updatedOriginal.content || content)
-    setDraftProgress(72); setDraftProgressMessage('AI is preparing your document…')
-    const result = await formatDocument(document.id, {
-      ...legalMetadata,
-      drafting_mode: formattingMode === 'legal' && documentMode === 'draft',
-      document_mode: documentMode,
-      legal_draft_details: legalDraftDetails,
-    })
-    setDraftProgress(90); setDraftProgressMessage('Applying document formatting…')
-    setFormattedContent(result.content_html || '')
-    setIsFormattedContentDirty(false)
-    setSelectedVersionId(result.id)
-    setDraftProgress(90); setDraftProgressMessage('Saving the completed draft…')
-    const versionData = await fetchDocumentVersions(document.id)
-    setVersions(versionData.items || [])
-    setActiveVersionId(versionData.active_version_id || null)
-    setActiveTab('formatted')
-    setIsDocumentTypePanelOpen(false)
-    setDraftProgress(100); setDraftProgressMessage('Your document is ready.')
-    setNotice(result.backup_status === 'backed_up' ? 'Your legal draft is ready and backed up to Google Drive.' : 'Your legal draft is ready and saved in VoiceDocs. A Google Drive backup is pending.')
+    publishDraftProgress(72, 'AI is preparing your document…')
+    try {
+      const result = await formatDocument(document.id, {
+        ...legalMetadata,
+        drafting_mode: formattingMode === 'legal' && documentMode === 'draft',
+        document_mode: documentMode,
+        legal_draft_details: legalDraftDetails,
+      })
+      publishDraftProgress(90, 'Applying document formatting…')
+      setFormattedContent(result.content_html || '')
+      setIsFormattedContentDirty(false)
+      setSelectedVersionId(result.id)
+      publishDraftProgress(96, 'Saving the completed draft…')
+      const versionData = await fetchDocumentVersions(document.id)
+      setVersions(versionData.items || [])
+      setActiveVersionId(versionData.active_version_id || null)
+      setActiveTab('formatted')
+      setIsDocumentTypePanelOpen(false)
+      publishDraftProgress(100, 'Your document is ready.')
+      const backupPending = result.backup_status !== 'backed_up'
+      const completionMessage = backupPending
+        ? 'Your legal draft is ready and saved in VoiceDocs. A Google Drive backup is pending.'
+        : 'Your legal draft is ready and backed up to Google Drive.'
+      draftFinishedEventRef.current = true
+      window.dispatchEvent(new CustomEvent('voicedocs:legal-draft-finished', {
+        detail: { documentId: document.id, title: title.trim() || document.title, status: 'ready', backupPending },
+      }))
+    } catch (draftError) {
+      draftFinishedEventRef.current = true
+      window.dispatchEvent(new CustomEvent('voicedocs:legal-draft-finished', {
+        detail: { documentId: document.id, title: title.trim() || document.title, status: 'failed' },
+      }))
+      throw draftError
+    }
   }
 
   async function handleFormatDocument() {
     if (!document?.id || document.id === 'new') return
-    setIsFormatting(true); setDraftProgress(8); setDraftProgressMessage('Checking document settings…'); setError(''); setNotice(''); setLegalPreflight(null)
+    setIsFormatting(true); setError(''); setNotice(''); setLegalPreflight(null)
+    draftFinishedEventRef.current = false
+    publishDraftProgress(8, 'Checking document settings…')
+    window.dispatchEvent(new CustomEvent('voicedocs:legal-draft-started', {
+      detail: { documentId: document.id, title: title.trim() || document.title || 'Preparing legal document', progress: 8, message: 'Checking document settings…' },
+    }))
     try {
       if (!legalSelectionIsValid) throw new Error('Select a legal category and document type before formatting.')
-      setDraftProgress(18); setDraftProgressMessage('Saving your original transcript…')
+      publishDraftProgress(18, 'Saving your original transcript…')
       const savedOriginal = await updateDocument(document.id, { title: title.trim(), content, ...legalMetadata })
       setDocument(savedOriginal); setContent(savedOriginal.content || content)
-      setDraftProgress(32); setDraftProgressMessage('Preparing attached audio…')
+      publishDraftProgress(32, 'Preparing attached audio…')
       await savePendingRecordings(savedOriginal.id)
-      setDraftProgress(48); setDraftProgressMessage('Checking required legal information…')
+      publishDraftProgress(48, 'Checking required legal information…')
       if (formattingMode === 'legal' && documentMode === 'draft') {
         const assessment = await checkLegalDraftCompleteness(document.id)
-        setDraftProgress(58); setDraftProgressMessage('Completeness check finished…')
-        if (assessment.status === 'needs_information') { setLegalPreflight(assessment); setLegalPreflightAnswers({}); setIsLegalDetailsModalOpen(false); setNotice(''); return }
+        publishDraftProgress(58, 'Completeness check finished…')
+        if (assessment.status === 'needs_information') { window.dispatchEvent(new CustomEvent('voicedocs:legal-draft-dismissed', { detail: { documentId: document.id } })); setLegalPreflight(assessment); setLegalPreflightAnswers({}); setIsLegalDetailsModalOpen(false); setNotice(''); return }
       }
       await generateLegalDraft()
-    } catch (formatError) { setError(formatError.response?.data?.detail || formatError.message || 'Could not format this document. Please try again.') }
+    } catch (formatError) { if (!draftFinishedEventRef.current) window.dispatchEvent(new CustomEvent('voicedocs:legal-draft-finished', { detail: { documentId: document.id, title: title.trim() || document.title, status: 'failed' } })); setError(formatError.response?.data?.detail || formatError.message || 'Could not format this document. Please try again.') }
     finally { setIsFormatting(false); setDraftProgress(0) }
   }
 
@@ -688,8 +739,6 @@ export default function DocumentPage() {
               )}
             </div>
           </div>
-          {error && <p className="alert alert-error" role="alert">{error}</p>}
-          {notice && <p className="alert alert-success" role="status">{notice}</p>}
           {isVersionTrashOpen && canManage && (
             <div className="legal-details-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setIsVersionTrashOpen(false) }}>
               <section className="legal-details-modal version-trash-modal" role="dialog" aria-modal="true" aria-labelledby="version-trash-title">
@@ -712,7 +761,18 @@ export default function DocumentPage() {
           {legalPreflight && !isLegalDetailsModalOpen && (
             <div className="legal-details-modal-backdrop" role="presentation">
               <section className="legal-details-modal legal-preflight-choice-modal" role="dialog" aria-modal="true" aria-labelledby="legal-preflight-title">
-                <h2 id="legal-preflight-title">Missing information before legal drafting</h2>
+                <div className="legal-details-modal-heading">
+                  <h2 id="legal-preflight-title">Missing information before legal drafting</h2>
+                  <button
+                    type="button"
+                    className="legal-details-modal-close"
+                    onClick={() => { setLegalPreflight(null); setIsLegalDetailsModalOpen(false); setError('') }}
+                    aria-label="Close missing information dialog"
+                    title="Close"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
                 <p>VoiceDocs found details that may be needed. Add the missing details, or generate a draft with clearly marked placeholders. This check does not certify legal compliance.</p>
                 <div className="document-sticky-actions">
                   <button type="button" className="primary-button" onClick={() => { setError(''); setIsLegalDetailsModalOpen(true) }} disabled={isContinuingLegalDraft}>Add Missing Details</button>
