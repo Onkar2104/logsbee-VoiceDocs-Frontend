@@ -303,13 +303,15 @@ export default function DocumentPage() {
     const updatedOriginal = await updateDocument(document.id, { title: title.trim(), content, ...legalMetadata })
     setDocument(updatedOriginal)
     setContent(updatedOriginal.content || content)
-    setDraftProgress(72); setDraftProgressMessage('AI is preparing your document…')\n    const result = await formatDocument(document.id, {
+    setDraftProgress(72); setDraftProgressMessage('AI is preparing your document…')
+    const result = await formatDocument(document.id, {
       ...legalMetadata,
       drafting_mode: formattingMode === 'legal' && documentMode === 'draft',
       document_mode: documentMode,
       legal_draft_details: legalDraftDetails,
     })
-    setDraftProgress(90); setDraftProgressMessage('Applying document formatting…')\n    setFormattedContent(result.content_html || '')
+    setDraftProgress(90); setDraftProgressMessage('Applying document formatting…')
+    setFormattedContent(result.content_html || '')
     setIsFormattedContentDirty(false)
     setSelectedVersionId(result.id)
     setDraftProgress(90); setDraftProgressMessage('Saving the completed draft…')
@@ -318,7 +320,8 @@ export default function DocumentPage() {
     setActiveVersionId(versionData.active_version_id || null)
     setActiveTab('formatted')
     setIsDocumentTypePanelOpen(false)
-    setDraftProgress(100); setDraftProgressMessage('Your document is ready.')\n    setNotice(result.backup_status === 'backed_up' ? 'Your legal draft is ready and backed up to Google Drive.' : 'Your legal draft is ready and saved in VoiceDocs. A Google Drive backup is pending.')
+    setDraftProgress(100); setDraftProgressMessage('Your document is ready.')
+    setNotice(result.backup_status === 'backed_up' ? 'Your legal draft is ready and backed up to Google Drive.' : 'Your legal draft is ready and saved in VoiceDocs. A Google Drive backup is pending.')
   }
 
   async function handleFormatDocument() {
@@ -333,7 +336,8 @@ export default function DocumentPage() {
       await savePendingRecordings(savedOriginal.id)
       setDraftProgress(48); setDraftProgressMessage('Checking required legal information…')
       if (formattingMode === 'legal' && documentMode === 'draft') {
-        const assessment = await checkLegalDraftCompleteness(document.id)\n        setDraftProgress(58); setDraftProgressMessage('Completeness check finished…')
+        const assessment = await checkLegalDraftCompleteness(document.id)
+        setDraftProgress(58); setDraftProgressMessage('Completeness check finished…')
         if (assessment.status === 'needs_information') { setLegalPreflight(assessment); setLegalPreflightAnswers({}); setIsLegalDetailsModalOpen(false); setNotice(''); return }
       }
       await generateLegalDraft()
