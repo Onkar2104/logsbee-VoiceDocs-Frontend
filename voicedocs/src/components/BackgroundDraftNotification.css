@@ -57,6 +57,10 @@
 .voicedocs-toast-success .voicedocs-toast-icon,.voicedocs-history-icon-success { color: #16945f; }
 .voicedocs-toast-error .voicedocs-toast-icon,.voicedocs-history-icon-error { color: #d04444; }
 .voicedocs-toast-info .voicedocs-toast-icon,.voicedocs-history-icon-info { color: #3979df; }
+.voicedocs-toast-activity { align-items: center; }
+.voicedocs-activity-content { cursor: default; }
+.voicedocs-toast-progress { display: block; overflow: hidden; width: 100%; height: 4px; margin-top: 4px; border-radius: 999px; background: #e8edf5; }
+.voicedocs-toast-progress > span { display: block; height: 100%; border-radius: inherit; background: #3979df; transition: width .25s ease; }
 .voicedocs-toast-content { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 3px; padding: 0; border: 0; background: transparent; color: inherit; text-align: left; }
 .voicedocs-toast-content:disabled { cursor: default; }
 .voicedocs-toast-content strong { font-size: 12px; }
