@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { AudioLines, Mic, Square, Upload } from 'lucide-react'
+import { AudioLines, Mic, Square, Upload, LoaderCircle } from 'lucide-react'
 import { transcribeUploadedAudioWithSpeechRecognition } from '../features/documents/browserTranscription'
 import { SUPPORTED_LANGUAGES } from '../features/current-user/languages'
 
@@ -313,6 +313,12 @@ export default function VoiceDictation({ onTranscript, onLiveTranscript, default
           <button type="button" className="voice-action-button voice-stop-button" onClick={stopRecording}><Square size={14} /> Stop recording</button>
         )}
       </div>
+      {isTranscribing && (
+        <div className="voice-transcription-loading" role="status" aria-live="polite">
+          <LoaderCircle className="app-loading-spinner" size={18} />
+          <span>Transcribing your audio… This may take a little while.</span>
+        </div>
+      )}
       {error && <p className="voice-error" role="alert">{error}</p>}
     </section>
   )
