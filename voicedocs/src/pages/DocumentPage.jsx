@@ -291,13 +291,24 @@ export default function DocumentPage() {
     }
   }
 
+  function publishDraftProgress(progress, message) {
+    setDraftProgress(progress)
+    setDraftProgressMessage(message)
+    window.dispatchEvent(new CustomEvent('voicedocs:legal-draft-progress', {
+      detail: { documentId: document?.id, title: title.trim() || document?.title || 'Preparing legal document', progress, message },
+    }))
+  }
+
   async function generateLegalDraft(legalDraftDetails = {}) {
+    window.dispatchEvent(new CustomEvent('voicedocs:legal-draft-started', {
+      detail: { documentId: document.id, title: title.trim() || document.title || 'Preparing legal document', progress: 60, message: 'Starting legal draft preparation…' },
+    }))
     // Keep the original narration unchanged. Intake answers are sent separately.
-    setDraftProgress(62); setDraftProgressMessage('Saving your original transcript…')
+    publishDraftProgress(62, 'Saving your original transcript…')
     const updatedOriginal = await updateDocument(document.id, { title: title.trim(), content, ...legalMetadata })
     setDocument(updatedOriginal)
     setContent(updatedOriginal.content || content)
-    setDraftProgress(72); setDraftProgressMessage('AI is preparing your document…')
+    publishDraftProgress(72, 'AI is preparing your document…')
     try {
       const result = await formatDocument(document.id, {
         ...legalMetadata,
@@ -305,28 +316,28 @@ export default function DocumentPage() {
         document_mode: documentMode,
         legal_draft_details: legalDraftDetails,
       })
-      setDraftProgress(90); setDraftProgressMessage('Applying document formatting…')
+      publishDraftProgress(90, 'Applying document formatting…')
       setFormattedContent(result.content_html || '')
       setIsFormattedContentDirty(false)
       setSelectedVersionId(result.id)
-      setDraftProgress(90); setDraftProgressMessage('Saving the completed draft…')
+      publishDraftProgress(96, 'Saving the completed draft…')
       const versionData = await fetchDocumentVersions(document.id)
       setVersions(versionData.items || [])
       setActiveVersionId(versionData.active_version_id || null)
       setActiveTab('formatted')
       setIsDocumentTypePanelOpen(false)
-      setDraftProgress(100); setDraftProgressMessage('Your document is ready.')
+      publishDraftProgress(100, 'Your document is ready.')
       const backupPending = result.backup_status !== 'backed_up'
       const completionMessage = backupPending
         ? 'Your legal draft is ready and saved in VoiceDocs. A Google Drive backup is pending.'
         : 'Your legal draft is ready and backed up to Google Drive.'
       setNotice(completionMessage)
       window.dispatchEvent(new CustomEvent('voicedocs:legal-draft-finished', {
-        detail: { documentId: document.id, status: 'ready', backupPending },
+        detail: { documentId: document.id, title: title.trim() || document.title, status: 'ready', backupPending },
       }))
     } catch (draftError) {
       window.dispatchEvent(new CustomEvent('voicedocs:legal-draft-finished', {
-        detail: { documentId: document.id, status: 'failed' },
+        detail: { documentId: document.id, title: title.trim() || document.title, status: 'failed' },
       }))
       throw draftError
     }
@@ -334,22 +345,26 @@ export default function DocumentPage() {
 
   async function handleFormatDocument() {
     if (!document?.id || document.id === 'new') return
-    setIsFormatting(true); setDraftProgress(8); setDraftProgressMessage('Checking document settings…'); setError(''); setNotice(''); setLegalPreflight(null)
+    setIsFormatting(true); setError(''); setNotice(''); setLegalPreflight(null)
+    publishDraftProgress(8, 'Checking document settings…')
+    window.dispatchEvent(new CustomEvent('voicedocs:legal-draft-started', {
+      detail: { documentId: document.id, title: title.trim() || document.title || 'Preparing legal document', progress: 8, message: 'Checking document settings…' },
+    }))
     try {
       if (!legalSelectionIsValid) throw new Error('Select a legal category and document type before formatting.')
-      setDraftProgress(18); setDraftProgressMessage('Saving your original transcript…')
+      publishDraftProgress(18, 'Saving your original transcript…')
       const savedOriginal = await updateDocument(document.id, { title: title.trim(), content, ...legalMetadata })
       setDocument(savedOriginal); setContent(savedOriginal.content || content)
-      setDraftProgress(32); setDraftProgressMessage('Preparing attached audio…')
+      publishDraftProgress(32, 'Preparing attached audio…')
       await savePendingRecordings(savedOriginal.id)
-      setDraftProgress(48); setDraftProgressMessage('Checking required legal information…')
+      publishDraftProgress(48, 'Checking required legal information…')
       if (formattingMode === 'legal' && documentMode === 'draft') {
         const assessment = await checkLegalDraftCompleteness(document.id)
-        setDraftProgress(58); setDraftProgressMessage('Completeness check finished…')
-        if (assessment.status === 'needs_information') { setLegalPreflight(assessment); setLegalPreflightAnswers({}); setIsLegalDetailsModalOpen(false); setNotice(''); return }
+        publishDraftProgress(58, 'Completeness check finished…')
+        if (assessment.status === 'needs_information') { window.dispatchEvent(new CustomEvent('voicedocs:legal-draft-dismissed', { detail: { documentId: document.id } })); setLegalPreflight(assessment); setLegalPreflightAnswers({}); setIsLegalDetailsModalOpen(false); setNotice(''); return }
       }
       await generateLegalDraft()
-    } catch (formatError) { setError(formatError.response?.data?.detail || formatError.message || 'Could not format this document. Please try again.') }
+    } catch (formatError) { window.dispatchEvent(new CustomEvent('voicedocs:legal-draft-finished', { detail: { documentId: document.id, title: title.trim() || document.title, status: 'failed' } })); setError(formatError.response?.data?.detail || formatError.message || 'Could not format this document. Please try again.') }
     finally { setIsFormatting(false); setDraftProgress(0) }
   }
 
