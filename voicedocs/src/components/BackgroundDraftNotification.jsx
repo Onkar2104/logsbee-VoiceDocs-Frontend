@@ -13,7 +13,7 @@ export default function BackgroundDraftNotification() {
   const navigate = useNavigate()
 
   const visibleNotifications = useMemo(
-    () => history.filter((item) => visibleIds.includes(item.id)),
+    () => visibleIds.map((id) => history.find((item) => item.id === id)).filter(Boolean),
     [history, visibleIds],
   )
 
@@ -34,11 +34,17 @@ export default function BackgroundDraftNotification() {
 
   useEffect(() => {
     if (!visibleIds.length) return undefined
-    const timers = visibleIds.map((id) => window.setTimeout(() => {
-      setVisibleIds((current) => current.filter((itemId) => itemId !== id))
-    }, DISMISS_AFTER_MS))
+    const timers = visibleIds.map((id) => {
+      const item = history.find((entry) => entry.id === id)
+      if (!item) return null
+      const elapsed = Date.now() - item.createdAt.getTime()
+      const remaining = Math.max(0, DISMISS_AFTER_MS - elapsed)
+      return window.setTimeout(() => {
+        setVisibleIds((current) => current.filter((itemId) => itemId !== id))
+      }, remaining)
+    }).filter(Boolean)
     return () => timers.forEach((timer) => window.clearTimeout(timer))
-  }, [visibleIds])
+  }, [visibleIds, history])
 
   useEffect(() => {
     function handleDraftStarted(event) {
@@ -194,7 +200,7 @@ export default function BackgroundDraftNotification() {
           <div className="voicedocs-notification-history-list">
             {history.length === 0 ? (
               <p className="voicedocs-notification-empty">No notifications yet.</p>
-            ) : history.map((item) => (
+            ) : [...history].reverse().map((item) => (
               <div className="voicedocs-history-item" key={item.id}>
                 <span className={`voicedocs-history-icon voicedocs-history-icon-${item.type}`}>{notificationIcon(item.type)}</span>
                 <div>
