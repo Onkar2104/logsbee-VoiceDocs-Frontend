@@ -80,6 +80,7 @@ export default function DocumentPage() {
   const [legalCategory, setLegalCategory] = useState('')
   const [legalDocumentType, setLegalDocumentType] = useState('')
   const contentTextareaRef = useRef(null)
+  const draftFinishedEventRef = useRef(false)
 
   const selectedLegalCategory = legalCatalog.categories.find((item) => item.id === legalCategory)
   const legalMetadata = {
@@ -300,6 +301,7 @@ export default function DocumentPage() {
   }
 
   async function generateLegalDraft(legalDraftDetails = {}) {
+    draftFinishedEventRef.current = false
     window.dispatchEvent(new CustomEvent('voicedocs:legal-draft-started', {
       detail: { documentId: document.id, title: title.trim() || document.title || 'Preparing legal document', progress: 60, message: 'Starting legal draft preparation…' },
     }))
@@ -332,10 +334,12 @@ export default function DocumentPage() {
         ? 'Your legal draft is ready and saved in VoiceDocs. A Google Drive backup is pending.'
         : 'Your legal draft is ready and backed up to Google Drive.'
       setNotice(completionMessage)
+      draftFinishedEventRef.current = true
       window.dispatchEvent(new CustomEvent('voicedocs:legal-draft-finished', {
         detail: { documentId: document.id, title: title.trim() || document.title, status: 'ready', backupPending },
       }))
     } catch (draftError) {
+      draftFinishedEventRef.current = true
       window.dispatchEvent(new CustomEvent('voicedocs:legal-draft-finished', {
         detail: { documentId: document.id, title: title.trim() || document.title, status: 'failed' },
       }))
@@ -346,6 +350,7 @@ export default function DocumentPage() {
   async function handleFormatDocument() {
     if (!document?.id || document.id === 'new') return
     setIsFormatting(true); setError(''); setNotice(''); setLegalPreflight(null)
+    draftFinishedEventRef.current = false
     publishDraftProgress(8, 'Checking document settings…')
     window.dispatchEvent(new CustomEvent('voicedocs:legal-draft-started', {
       detail: { documentId: document.id, title: title.trim() || document.title || 'Preparing legal document', progress: 8, message: 'Checking document settings…' },
@@ -364,7 +369,7 @@ export default function DocumentPage() {
         if (assessment.status === 'needs_information') { window.dispatchEvent(new CustomEvent('voicedocs:legal-draft-dismissed', { detail: { documentId: document.id } })); setLegalPreflight(assessment); setLegalPreflightAnswers({}); setIsLegalDetailsModalOpen(false); setNotice(''); return }
       }
       await generateLegalDraft()
-    } catch (formatError) { window.dispatchEvent(new CustomEvent('voicedocs:legal-draft-finished', { detail: { documentId: document.id, title: title.trim() || document.title, status: 'failed' } })); setError(formatError.response?.data?.detail || formatError.message || 'Could not format this document. Please try again.') }
+    } catch (formatError) { if (!draftFinishedEventRef.current) window.dispatchEvent(new CustomEvent('voicedocs:legal-draft-finished', { detail: { documentId: document.id, title: title.trim() || document.title, status: 'failed' } })); setError(formatError.response?.data?.detail || formatError.message || 'Could not format this document. Please try again.') }
     finally { setIsFormatting(false); setDraftProgress(0) }
   }
 
