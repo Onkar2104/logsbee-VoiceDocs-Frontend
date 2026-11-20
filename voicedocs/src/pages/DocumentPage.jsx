@@ -63,6 +63,24 @@ export default function DocumentPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
+
+  useEffect(() => {
+    if (error) {
+      window.dispatchEvent(new CustomEvent('voicedocs:notification', {
+        detail: { type: 'error', title: 'Something went wrong', message: error, documentId: document?.id, documentTitle: title.trim() || document?.title || '' },
+      }))
+      setError('')
+    }
+  }, [error, document?.id, document?.title, title])
+
+  useEffect(() => {
+    if (notice) {
+      window.dispatchEvent(new CustomEvent('voicedocs:notification', {
+        detail: { type: 'success', title: notice, documentId: document?.id, documentTitle: title.trim() || document?.title || '' },
+      }))
+      setNotice('')
+    }
+  }, [notice, document?.id, document?.title, title])
   const [isRequestingAccess, setIsRequestingAccess] = useState(false)
   const [isDownloadMenuOpen, setIsDownloadMenuOpen] = useState(false)
   const [downloadFormat, setDownloadFormat] = useState('')
@@ -333,7 +351,6 @@ export default function DocumentPage() {
       const completionMessage = backupPending
         ? 'Your legal draft is ready and saved in VoiceDocs. A Google Drive backup is pending.'
         : 'Your legal draft is ready and backed up to Google Drive.'
-      setNotice(completionMessage)
       draftFinishedEventRef.current = true
       window.dispatchEvent(new CustomEvent('voicedocs:legal-draft-finished', {
         detail: { documentId: document.id, title: title.trim() || document.title, status: 'ready', backupPending },
@@ -722,8 +739,6 @@ export default function DocumentPage() {
               )}
             </div>
           </div>
-          {error && <p className="alert alert-error" role="alert">{error}</p>}
-          {notice && <p className="alert alert-success" role="status">{notice}</p>}
           {isVersionTrashOpen && canManage && (
             <div className="legal-details-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setIsVersionTrashOpen(false) }}>
               <section className="legal-details-modal version-trash-modal" role="dialog" aria-modal="true" aria-labelledby="version-trash-title">
