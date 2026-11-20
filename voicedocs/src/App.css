@@ -1916,3 +1916,35 @@
 @media (max-width: 520px) {
   .app-loading-card { padding: 22px 18px; }
 }
+
+
+/* Loading feedback stays inside the document page; never blocks it with a popup. */
+.inline-loading-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  margin: 0 0 16px;
+  padding: 12px 15px;
+  border: 1px solid #e4e7ec;
+  border-radius: 12px;
+  background: #f9fafb;
+  color: #344054;
+  box-sizing: border-box;
+}
+.inline-loading-heading {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  font-size: 13px;
+}
+.inline-loading-heading strong:first-of-type { font-weight: 600; }
+.inline-loading-heading .inline-loading-percent { margin-left: auto; font-variant-numeric: tabular-nums; }
+.inline-loading-panel p {
+  margin: 0 0 0 28px;
+  color: #667085;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.inline-loading-progress-panel .app-loading-progress-track { margin-top: 2px; }

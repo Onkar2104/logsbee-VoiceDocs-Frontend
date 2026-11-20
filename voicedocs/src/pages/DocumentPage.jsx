@@ -11,27 +11,21 @@ import { fetchUserPreferences } from '../features/current-user/preferencesApi'
 import { uploadBrowserRecording } from '../features/recordings/recordingsApi'
 
 
-function LoadingOverlay({ title, detail, progress }) {
+function InlineLoading({ title, detail, progress }) {
   const hasProgress = Number.isFinite(progress)
   return (
-    <div className="app-loading-backdrop" role="status" aria-live="polite" aria-label={title}>
-      <section className="app-loading-card">
-        <LoaderCircle className="app-loading-spinner" size={34} />
-        <h2>{title}</h2>
-        {detail && <p>{detail}</p>}
-        {hasProgress && (
-          <div className="app-loading-progress">
-            <div className="app-loading-progress-meta">
-              <span>Workflow progress</span>
-              <strong>{Math.round(progress)}%</strong>
-            </div>
-            <div className="app-loading-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow={Math.round(progress)}>
-              <span style={{ width: `${Math.min(100, Math.max(0, progress))}%` }} />
-            </div>
-            <small>Progress reflects completed preparation stages. AI generation time can vary.</small>
-          </div>
-        )}
-      </section>
+    <div className={hasProgress ? "inline-loading-panel inline-loading-progress-panel" : "inline-loading-panel"} role="status" aria-live="polite">
+      <div className="inline-loading-heading">
+        <LoaderCircle className="app-loading-spinner" size={19} />
+        <strong>{title}</strong>
+        {hasProgress && <strong className="inline-loading-percent">{Math.round(progress)}%</strong>}
+      </div>
+      {detail && <p>{detail}</p>}
+      {hasProgress && (
+        <div className="app-loading-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow={Math.round(progress)}>
+          <span style={{ width: `${Math.min(100, Math.max(0, progress))}%` }} />
+        </div>
+      )}
     </div>
   )
 }
@@ -627,9 +621,9 @@ export default function DocumentPage() {
       <WorkspaceSidebar />
 
       <section className="document-page-content">
-        {(isFormatting || isContinuingLegalDraft) && <LoadingOverlay title="Preparing your draft" detail={draftProgressMessage} progress={draftProgress} />}
+        {(isFormatting || isContinuingLegalDraft) && <InlineLoading title="Preparing your draft" detail={draftProgressMessage} progress={draftProgress} />}
         {!isFormatting && !isContinuingLegalDraft && (isSaving || isBackingUp || Boolean(downloadFormat) || isSavingVersion || isRequestingAccess || isLoadingVersion) && (
-          <LoadingOverlay
+          <InlineLoading
             title={isSaving ? 'Saving document…' : isBackingUp ? 'Backing up to Google Drive…' : downloadFormat ? `Preparing ${downloadFormat.toUpperCase()} download…` : isSavingVersion ? 'Saving formatted version…' : isRequestingAccess ? 'Sending access request…' : 'Loading formatted version…'}
             detail="Please wait while VoiceDocs completes this action."
           />
