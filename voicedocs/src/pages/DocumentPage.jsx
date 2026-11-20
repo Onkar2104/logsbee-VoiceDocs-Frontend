@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ArrowLeft, Clock3, Download, FileText, Save, Trash2, Sparkles, History, RotateCcw, ExternalLink, Archive, X } from 'lucide-react'
+import { ArrowLeft, Clock3, Download, FileText, Save, Trash2, Sparkles, History, RotateCcw, ExternalLink, Archive, X, LoaderCircle } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../context/useAuth'
 import VoiceDictation from '../components/VoiceDictation'
@@ -9,6 +9,32 @@ import { downloadDocumentPdf, downloadBlobFile } from '../features/documents/doc
 import { backupDocument, createDocument, deleteDocument, fetchDocument, requestDocumentEditAccess, updateDocument, formatDocument, checkLegalDraftCompleteness, fetchDocumentVersions, fetchDocumentVersion, replaceDocumentVersion, createDocumentVersion, backupDocumentVersion, exportDocumentDocx, fetchLegalDocumentCatalog, fetchDeletedDocumentVersions, deleteDocumentVersion, restoreDocumentVersion, permanentlyDeleteDocumentVersion } from '../features/documents/documentsApi'
 import { fetchUserPreferences } from '../features/current-user/preferencesApi'
 import { uploadBrowserRecording } from '../features/recordings/recordingsApi'
+
+
+function LoadingOverlay({ title, detail, progress }) {
+  const hasProgress = Number.isFinite(progress)
+  return (
+    <div className="app-loading-backdrop" role="status" aria-live="polite" aria-label={title}>
+      <section className="app-loading-card">
+        <LoaderCircle className="app-loading-spinner" size={34} />
+        <h2>{title}</h2>
+        {detail && <p>{detail}</p>}
+        {hasProgress && (
+          <div className="app-loading-progress">
+            <div className="app-loading-progress-meta">
+              <span>Workflow progress</span>
+              <strong>{Math.round(progress)}%</strong>
+            </div>
+            <div className="app-loading-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow={Math.round(progress)}>
+              <span style={{ width: `${Math.min(100, Math.max(0, progress))}%` }} />
+            </div>
+            <small>Progress reflects completed preparation stages. AI generation time can vary.</small>
+          </div>
+        )}
+      </section>
+    </div>
+  )
+}
 
 function formatDate(value) {
   if (!value) return 'Not available'
@@ -33,6 +59,9 @@ export default function DocumentPage() {
   const [activeVersionId, setActiveVersionId] = useState(null)
   const [activeTab, setActiveTab] = useState('original')
   const [isFormatting, setIsFormatting] = useState(false)
+  const [draftProgress, setDraftProgress] = useState(0)
+  const [draftProgressMessage, setDraftProgressMessage] = useState('Preparing your document…')
+  const [isLoadingVersion, setIsLoadingVersion] = useState(false)
   const [isSavingVersion, setIsSavingVersion] = useState(false)
   const [isFormattedContentDirty, setIsFormattedContentDirty] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
@@ -273,13 +302,13 @@ export default function DocumentPage() {
     const updatedOriginal = await updateDocument(document.id, { title: title.trim(), content, ...legalMetadata })
     setDocument(updatedOriginal)
     setContent(updatedOriginal.content || content)
-    const result = await formatDocument(document.id, {
+    setDraftProgress(72); setDraftProgressMessage('AI is preparing your document…')\n    const result = await formatDocument(document.id, {
       ...legalMetadata,
       drafting_mode: formattingMode === 'legal' && documentMode === 'draft',
       document_mode: documentMode,
       legal_draft_details: legalDraftDetails,
     })
-    setFormattedContent(result.content_html || '')
+    setDraftProgress(90); setDraftProgressMessage('Applying document formatting…')\n    setFormattedContent(result.content_html || '')
     setIsFormattedContentDirty(false)
     setSelectedVersionId(result.id)
     const versionData = await fetchDocumentVersions(document.id)
@@ -287,7 +316,7 @@ export default function DocumentPage() {
     setActiveVersionId(versionData.active_version_id || null)
     setActiveTab('formatted')
     setIsDocumentTypePanelOpen(false)
-    setNotice(result.backup_status === 'backed_up' ? 'Your legal draft is ready and backed up to Google Drive.' : 'Your legal draft is ready and saved in VoiceDocs. A Google Drive backup is pending.')
+    setDraftProgress(100); setDraftProgressMessage('Your document is ready.')\n    setNotice(result.backup_status === 'backed_up' ? 'Your legal draft is ready and backed up to Google Drive.' : 'Your legal draft is ready and saved in VoiceDocs. A Google Drive backup is pending.')
   }
 
   async function handleFormatDocument() {
@@ -299,17 +328,17 @@ export default function DocumentPage() {
       setDocument(savedOriginal); setContent(savedOriginal.content || content)
       await savePendingRecordings(savedOriginal.id)
       if (formattingMode === 'legal' && documentMode === 'draft') {
-        const assessment = await checkLegalDraftCompleteness(document.id)
+        const assessment = await checkLegalDraftCompleteness(document.id)\n        setDraftProgress(58); setDraftProgressMessage('Completeness check finished…')
         if (assessment.status === 'needs_information') { setLegalPreflight(assessment); setLegalPreflightAnswers({}); setIsLegalDetailsModalOpen(false); setNotice(''); return }
       }
       await generateLegalDraft()
     } catch (formatError) { setError(formatError.response?.data?.detail || formatError.message || 'Could not format this document. Please try again.') }
-    finally { setIsFormatting(false) }
+    finally { setIsFormatting(false); setDraftProgress(0) }
   }
 
   async function handleContinueLegalDraft(allowPlaceholders = false) {
     if (!legalPreflight || !document?.id) return
-    setIsContinuingLegalDraft(true); setError('')
+    setIsContinuingLegalDraft(true); setDraftProgress(12); setDraftProgressMessage('Preparing the details you supplied…'); setError('')
     try {
       const placeholderValues = {
         notice_date: '[नोटीसची तारीख]',
@@ -335,7 +364,7 @@ export default function DocumentPage() {
         setNotice('Draft generated with clearly marked missing-information placeholders. Complete and legally review them before use.')
       }
     } catch (draftError) { setError(draftError.response?.data?.detail || draftError.message || 'Could not continue legal drafting.') }
-    finally { setIsContinuingLegalDraft(false) }
+    finally { setIsContinuingLegalDraft(false); setDraftProgress(0) }
   }
 
   async function handleSaveAsNewVersion() {
@@ -398,6 +427,7 @@ export default function DocumentPage() {
   async function handleSelectVersion(versionId) {
     if (!versionId || versionId === selectedVersionId) return
     setError('')
+    setIsLoadingVersion(true)
     try {
       // Browsing history is local to this editor; saving a version changes the active version.
       const selected = await fetchDocumentVersion(document.id, versionId)
@@ -407,6 +437,8 @@ export default function DocumentPage() {
       setNotice(`Loaded formatted version ${selected.version_number}.`)
     } catch (loadError) {
       setError(loadError.response?.data?.detail || 'Could not load that formatted version.')
+    } finally {
+      setIsLoadingVersion(false)
     }
   }
 
@@ -554,7 +586,7 @@ export default function DocumentPage() {
     return (
       <main className="document-page-shell workspace-with-sidebar">
         <WorkspaceSidebar />
-        <section className="document-page-content"><div className="documents-state">Loading document…</div></section>
+                <section className="document-page-content"><div className="documents-state"><LoaderCircle className="app-loading-spinner" size={30} /><span>Opening your document…</span></div></section>
       </main>
     )
   }
@@ -586,6 +618,13 @@ export default function DocumentPage() {
       <WorkspaceSidebar />
 
       <section className="document-page-content">
+        {(isFormatting || isContinuingLegalDraft) && <LoadingOverlay title="Preparing your draft" detail={draftProgressMessage} progress={draftProgress} />}
+        {!isFormatting && !isContinuingLegalDraft && (isSaving || isBackingUp || Boolean(downloadFormat) || isSavingVersion || isRequestingAccess || isLoadingVersion) && (
+          <LoadingOverlay
+            title={isSaving ? 'Saving document…' : isBackingUp ? 'Backing up to Google Drive…' : downloadFormat ? `Preparing ${downloadFormat.toUpperCase()} download…` : isSavingVersion ? 'Saving formatted version…' : isRequestingAccess ? 'Sending access request…' : 'Loading formatted version…'}
+            detail="Please wait while VoiceDocs completes this action."
+          />
+        )}
         <div className="document-page-meta">
           <div className="document-title-icon"><FileText size={21} /></div>
           <div><p className="eyebrow">DOCUMENT WORKSPACE</p><h1>{isNewDocument ? 'Untitled document' : document.title}</h1></div>
