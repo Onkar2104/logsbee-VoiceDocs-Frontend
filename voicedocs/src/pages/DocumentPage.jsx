@@ -298,24 +298,38 @@ export default function DocumentPage() {
     setDocument(updatedOriginal)
     setContent(updatedOriginal.content || content)
     setDraftProgress(72); setDraftProgressMessage('AI is preparing your document…')
-    const result = await formatDocument(document.id, {
-      ...legalMetadata,
-      drafting_mode: formattingMode === 'legal' && documentMode === 'draft',
-      document_mode: documentMode,
-      legal_draft_details: legalDraftDetails,
-    })
-    setDraftProgress(90); setDraftProgressMessage('Applying document formatting…')
-    setFormattedContent(result.content_html || '')
-    setIsFormattedContentDirty(false)
-    setSelectedVersionId(result.id)
-    setDraftProgress(90); setDraftProgressMessage('Saving the completed draft…')
-    const versionData = await fetchDocumentVersions(document.id)
-    setVersions(versionData.items || [])
-    setActiveVersionId(versionData.active_version_id || null)
-    setActiveTab('formatted')
-    setIsDocumentTypePanelOpen(false)
-    setDraftProgress(100); setDraftProgressMessage('Your document is ready.')
-    setNotice(result.backup_status === 'backed_up' ? 'Your legal draft is ready and backed up to Google Drive.' : 'Your legal draft is ready and saved in VoiceDocs. A Google Drive backup is pending.')
+    try {
+      const result = await formatDocument(document.id, {
+        ...legalMetadata,
+        drafting_mode: formattingMode === 'legal' && documentMode === 'draft',
+        document_mode: documentMode,
+        legal_draft_details: legalDraftDetails,
+      })
+      setDraftProgress(90); setDraftProgressMessage('Applying document formatting…')
+      setFormattedContent(result.content_html || '')
+      setIsFormattedContentDirty(false)
+      setSelectedVersionId(result.id)
+      setDraftProgress(90); setDraftProgressMessage('Saving the completed draft…')
+      const versionData = await fetchDocumentVersions(document.id)
+      setVersions(versionData.items || [])
+      setActiveVersionId(versionData.active_version_id || null)
+      setActiveTab('formatted')
+      setIsDocumentTypePanelOpen(false)
+      setDraftProgress(100); setDraftProgressMessage('Your document is ready.')
+      const backupPending = result.backup_status !== 'backed_up'
+      const completionMessage = backupPending
+        ? 'Your legal draft is ready and saved in VoiceDocs. A Google Drive backup is pending.'
+        : 'Your legal draft is ready and backed up to Google Drive.'
+      setNotice(completionMessage)
+      window.dispatchEvent(new CustomEvent('voicedocs:legal-draft-finished', {
+        detail: { documentId: document.id, status: 'ready', backupPending },
+      }))
+    } catch (draftError) {
+      window.dispatchEvent(new CustomEvent('voicedocs:legal-draft-finished', {
+        detail: { documentId: document.id, status: 'failed' },
+      }))
+      throw draftError
+    }
   }
 
   async function handleFormatDocument() {
