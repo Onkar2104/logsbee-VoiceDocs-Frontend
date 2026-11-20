@@ -7,6 +7,7 @@ const DISMISS_AFTER_MS = 5000
 
 export default function BackgroundDraftNotification() {
   const [draft, setDraft] = useState(null)
+  const [activities, setActivities] = useState([])
   const [history, setHistory] = useState([])
   const [visibleIds, setVisibleIds] = useState([])
   const [isHistoryOpen, setIsHistoryOpen] = useState(false)
@@ -92,17 +93,34 @@ export default function BackgroundDraftNotification() {
       addNotification(event.detail || {})
     }
 
+    function handleActivityUpdated(event) {
+      const detail = event.detail || {}
+      if (!detail.id) return
+      setActivities((current) => current.some((item) => item.id === detail.id)
+        ? current.map((item) => item.id === detail.id ? { ...item, ...detail } : item)
+        : [...current, detail])
+    }
+
+    function handleActivityFinished(event) {
+      const id = event.detail?.id
+      if (id) setActivities((current) => current.filter((item) => item.id !== id))
+    }
+
     window.addEventListener('voicedocs:legal-draft-started', handleDraftStarted)
     window.addEventListener('voicedocs:legal-draft-progress', handleDraftProgress)
     window.addEventListener('voicedocs:legal-draft-finished', handleDraftFinished)
     window.addEventListener('voicedocs:legal-draft-dismissed', handleDraftDismissed)
     window.addEventListener('voicedocs:notification', handleNotification)
+    window.addEventListener('voicedocs:activity-updated', handleActivityUpdated)
+    window.addEventListener('voicedocs:activity-finished', handleActivityFinished)
     return () => {
       window.removeEventListener('voicedocs:legal-draft-started', handleDraftStarted)
       window.removeEventListener('voicedocs:legal-draft-progress', handleDraftProgress)
       window.removeEventListener('voicedocs:legal-draft-finished', handleDraftFinished)
       window.removeEventListener('voicedocs:legal-draft-dismissed', handleDraftDismissed)
       window.removeEventListener('voicedocs:notification', handleNotification)
+      window.removeEventListener('voicedocs:activity-updated', handleActivityUpdated)
+      window.removeEventListener('voicedocs:activity-finished', handleActivityFinished)
     }
   }, [])
 
@@ -161,6 +179,21 @@ export default function BackgroundDraftNotification() {
           </button>
         </section>
       )}
+
+      {activities.map((activity) => (
+        <article className="voicedocs-toast voicedocs-toast-activity" key={activity.id} role="status">
+          <span className="voicedocs-toast-icon"><LoaderCircle size={17} className="app-loading-spinner" /></span>
+          <div className="voicedocs-toast-content voicedocs-activity-content">
+            <strong>{activity.title}</strong>
+            {activity.message && <span>{activity.message}</span>}
+            {Number.isFinite(activity.progress) && (
+              <span className="voicedocs-toast-progress">
+                <span style={{ width: `${Math.min(100, Math.max(0, activity.progress))}%` }} />
+              </span>
+            )}
+          </div>
+        </article>
+      ))}
 
       {visibleNotifications.map((item) => (
         <article className={`voicedocs-toast voicedocs-toast-${item.type}`} key={item.id}>
