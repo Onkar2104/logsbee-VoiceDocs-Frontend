@@ -299,6 +299,7 @@ export default function DocumentPage() {
 
   async function generateLegalDraft(legalDraftDetails = {}) {
     // Keep the original narration unchanged. Intake answers are sent separately.
+    setDraftProgress(62); setDraftProgressMessage('Saving your original transcript…')
     const updatedOriginal = await updateDocument(document.id, { title: title.trim(), content, ...legalMetadata })
     setDocument(updatedOriginal)
     setContent(updatedOriginal.content || content)
@@ -311,6 +312,7 @@ export default function DocumentPage() {
     setDraftProgress(90); setDraftProgressMessage('Applying document formatting…')\n    setFormattedContent(result.content_html || '')
     setIsFormattedContentDirty(false)
     setSelectedVersionId(result.id)
+    setDraftProgress(90); setDraftProgressMessage('Saving the completed draft…')
     const versionData = await fetchDocumentVersions(document.id)
     setVersions(versionData.items || [])
     setActiveVersionId(versionData.active_version_id || null)
@@ -321,12 +323,15 @@ export default function DocumentPage() {
 
   async function handleFormatDocument() {
     if (!document?.id || document.id === 'new') return
-    setIsFormatting(true); setError(''); setNotice(''); setLegalPreflight(null)
+    setIsFormatting(true); setDraftProgress(8); setDraftProgressMessage('Checking document settings…'); setError(''); setNotice(''); setLegalPreflight(null)
     try {
       if (!legalSelectionIsValid) throw new Error('Select a legal category and document type before formatting.')
+      setDraftProgress(18); setDraftProgressMessage('Saving your original transcript…')
       const savedOriginal = await updateDocument(document.id, { title: title.trim(), content, ...legalMetadata })
       setDocument(savedOriginal); setContent(savedOriginal.content || content)
+      setDraftProgress(32); setDraftProgressMessage('Preparing attached audio…')
       await savePendingRecordings(savedOriginal.id)
+      setDraftProgress(48); setDraftProgressMessage('Checking required legal information…')
       if (formattingMode === 'legal' && documentMode === 'draft') {
         const assessment = await checkLegalDraftCompleteness(document.id)\n        setDraftProgress(58); setDraftProgressMessage('Completeness check finished…')
         if (assessment.status === 'needs_information') { setLegalPreflight(assessment); setLegalPreflightAnswers({}); setIsLegalDetailsModalOpen(false); setNotice(''); return }
