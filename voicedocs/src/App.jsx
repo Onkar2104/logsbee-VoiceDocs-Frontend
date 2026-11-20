@@ -9,12 +9,14 @@ import ProfilePage from './pages/ProfilePage'
 import DrivePage from './pages/DrivePage'
 import AudioPage from './pages/AudioPage'
 import TrashPage from './pages/TrashPage'
+import BackgroundDraftNotification from './components/BackgroundDraftNotification'
 import './App.css'
 
 function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <BackgroundDraftNotification />
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
