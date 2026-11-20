@@ -726,7 +726,18 @@ export default function DocumentPage() {
           {legalPreflight && !isLegalDetailsModalOpen && (
             <div className="legal-details-modal-backdrop" role="presentation">
               <section className="legal-details-modal legal-preflight-choice-modal" role="dialog" aria-modal="true" aria-labelledby="legal-preflight-title">
-                <h2 id="legal-preflight-title">Missing information before legal drafting</h2>
+                <div className="legal-details-modal-heading">
+                  <h2 id="legal-preflight-title">Missing information before legal drafting</h2>
+                  <button
+                    type="button"
+                    className="legal-details-modal-close"
+                    onClick={() => { setLegalPreflight(null); setIsLegalDetailsModalOpen(false); setError('') }}
+                    aria-label="Close missing information dialog"
+                    title="Close"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
                 <p>VoiceDocs found details that may be needed. Add the missing details, or generate a draft with clearly marked placeholders. This check does not certify legal compliance.</p>
                 <div className="document-sticky-actions">
                   <button type="button" className="primary-button" onClick={() => { setError(''); setIsLegalDetailsModalOpen(true) }} disabled={isContinuingLegalDraft}>Add Missing Details</button>
