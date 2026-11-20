@@ -1,56 +1,234 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { AlertCircle, Bell, CheckCircle2, FileText, Info, LoaderCircle, X } from 'lucide-react'
+
+const DISMISS_AFTER_MS = 5000
 
 export default function BackgroundDraftNotification() {
-  const [notification, setNotification] = useState(null)
+  const [draft, setDraft] = useState(null)
+  const [history, setHistory] = useState([])
+  const [visibleIds, setVisibleIds] = useState([])
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false)
   const location = useLocation()
   const navigate = useNavigate()
 
+  const visibleNotifications = useMemo(
+    () => history.filter((item) => visibleIds.includes(item.id)),
+    [history, visibleIds],
+  )
+
+  function addNotification(detail = {}) {
+    const id = `notice-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    const item = {
+      id,
+      type: detail.type || 'info',
+      title: detail.title || 'VoiceDocs notification',
+      message: detail.message || '',
+      documentId: detail.documentId || null,
+      documentTitle: detail.documentTitle || '',
+      createdAt: new Date(),
+    }
+    setHistory((current) => [item, ...current])
+    setVisibleIds((current) => [...current, id])
+  }
+
   useEffect(() => {
-    function handleDraftFinished(event) {
+    if (!visibleIds.length) return undefined
+    const timers = visibleIds.map((id) => window.setTimeout(() => {
+      setVisibleIds((current) => current.filter((itemId) => itemId !== id))
+    }, DISMISS_AFTER_MS))
+    return () => timers.forEach((timer) => window.clearTimeout(timer))
+  }, [visibleIds])
+
+  useEffect(() => {
+    function handleDraftStarted(event) {
       const detail = event.detail || {}
-      const documentPath = detail.documentId ? `/documents/${detail.documentId}` : ''
-      if (documentPath && location.pathname === documentPath) return
-      setNotification(detail)
+      setDraft({
+        documentId: detail.documentId || null,
+        title: detail.title || 'Preparing document',
+        progress: Number.isFinite(detail.progress) ? detail.progress : 0,
+        message: detail.message || 'Preparing your document…',
+      })
     }
 
+    function handleDraftProgress(event) {
+      const detail = event.detail || {}
+      setDraft((current) => current ? {
+        ...current,
+        ...detail,
+        progress: Number.isFinite(detail.progress) ? detail.progress : current.progress,
+      } : current)
+    }
+
+    function handleDraftFinished(event) {
+      const detail = event.detail || {}
+      setDraft((current) => current?.documentId && detail.documentId && current.documentId !== detail.documentId ? current : null)
+      const failed = detail.status === 'failed'
+      addNotification({
+        type: failed ? 'error' : 'success',
+        title: failed ? 'Legal draft preparation failed' : 'Legal draft is ready',
+        message: failed
+          ? 'Open the document to review the error and try again.'
+          : detail.backupPending
+            ? 'Saved in VoiceDocs. Google Drive backup is pending.'
+            : 'Your document has been prepared successfully.',
+        documentId: detail.documentId,
+        documentTitle: detail.title || '',
+      })
+    }
+
+    function handleDraftDismissed(event) {
+      const detail = event.detail || {}
+      setDraft((current) => current?.documentId === detail.documentId ? null : current)
+    }
+
+    function handleNotification(event) {
+      addNotification(event.detail || {})
+    }
+
+    window.addEventListener('voicedocs:legal-draft-started', handleDraftStarted)
+    window.addEventListener('voicedocs:legal-draft-progress', handleDraftProgress)
     window.addEventListener('voicedocs:legal-draft-finished', handleDraftFinished)
-    return () => window.removeEventListener('voicedocs:legal-draft-finished', handleDraftFinished)
-  }, [location.pathname])
+    window.addEventListener('voicedocs:legal-draft-dismissed', handleDraftDismissed)
+    window.addEventListener('voicedocs:notification', handleNotification)
+    return () => {
+      window.removeEventListener('voicedocs:legal-draft-started', handleDraftStarted)
+      window.removeEventListener('voicedocs:legal-draft-progress', handleDraftProgress)
+      window.removeEventListener('voicedocs:legal-draft-finished', handleDraftFinished)
+      window.removeEventListener('voicedocs:legal-draft-dismissed', handleDraftDismissed)
+      window.removeEventListener('voicedocs:notification', handleNotification)
+    }
+  }, [])
 
-  if (!notification) return null
+  function clearAllNotifications() {
+    setHistory([])
+    setVisibleIds([])
+  }
 
-  const failed = notification.status === 'failed'
+  function openDocument(documentId) {
+    if (documentId) navigate(`/documents/${documentId}`)
+    setIsHistoryOpen(false)
+  }
+
+  const notificationIcon = (type) => {
+    if (type === 'success') return <CheckCircle2 size={17} />
+    if (type === 'error') return <AlertCircle size={17} />
+    return <Info size={17} />
+  }
+
   return (
-    <aside
-      role="status"
-      aria-live="polite"
-      style={{
-        position: 'fixed', right: '24px', bottom: '24px', zIndex: 1200,
-        width: 'min(380px, calc(100vw - 32px))', padding: '16px',
-        borderRadius: '12px', background: 'var(--surface, #fff)',
-        color: 'var(--text-primary, #172033)', border: '1px solid var(--border, #d8dee9)',
-        boxShadow: '0 10px 30px rgba(15, 23, 42, 0.16)',
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
-        <strong>{failed ? 'Draft preparation failed' : 'Legal draft is ready'}</strong>
-        <button type="button" aria-label="Dismiss notification" onClick={() => setNotification(null)}>×</button>
-      </div>
-      <p style={{ margin: '8px 0 12px' }}>
-        {failed
-          ? 'VoiceDocs could not complete the legal draft. Open the document to review the error and try again.'
-          : 'Your legal document has been prepared and saved.'}
-      </p>
+    <div className="voicedocs-notification-dock" aria-live="polite">
+      {draft && (
+        <section className="voicedocs-draft-wrap">
+          <div className="voicedocs-draft-hover-details" role="tooltip">
+            <div className="voicedocs-draft-details-heading">
+              <FileText size={18} />
+              <div>
+                <strong>{draft.title}</strong>
+                <span>Legal document preparation</span>
+              </div>
+            </div>
+            <div className="voicedocs-draft-details-progress">
+              <strong>{Math.round(draft.progress)}%</strong>
+              <span>{draft.message}</span>
+            </div>
+            <div className="voicedocs-draft-progress-track">
+              <span style={{ width: `${Math.min(100, Math.max(0, draft.progress))}%` }} />
+            </div>
+            <p className="voicedocs-draft-details-hint">Preparation continues while you navigate to other pages.</p>
+          </div>
+          <button
+            type="button"
+            className="voicedocs-draft-card"
+            onClick={() => openDocument(draft.documentId)}
+            title="Open the document being prepared"
+          >
+            <span className="voicedocs-draft-card-icon"><FileText size={17} /></span>
+            <span className="voicedocs-draft-card-copy">
+              <strong>{draft.title}</strong>
+              <span>{draft.message}</span>
+              <span className="voicedocs-draft-card-track">
+                <span style={{ width: `${Math.min(100, Math.max(0, draft.progress))}%` }} />
+              </span>
+            </span>
+            <strong className="voicedocs-draft-percent">{Math.round(draft.progress)}%</strong>
+          </button>
+        </section>
+      )}
+
+      {visibleNotifications.map((item) => (
+        <article className={`voicedocs-toast voicedocs-toast-${item.type}`} key={item.id}>
+          <span className="voicedocs-toast-icon">{notificationIcon(item.type)}</span>
+          <button
+            type="button"
+            className="voicedocs-toast-content"
+            onClick={() => item.documentId && openDocument(item.documentId)}
+            disabled={!item.documentId}
+          >
+            <strong>{item.title}</strong>
+            {item.message && <span>{item.message}</span>}
+            {item.documentTitle && <small>{item.documentTitle}</small>}
+          </button>
+          <button
+            type="button"
+            className="voicedocs-toast-close"
+            aria-label="Dismiss notification"
+            onClick={() => setVisibleIds((current) => current.filter((id) => id !== item.id))}
+          >
+            <X size={15} />
+          </button>
+        </article>
+      ))}
+
+      {isHistoryOpen && (
+        <section className="voicedocs-notification-history" aria-label="Notification history">
+          <header>
+            <div>
+              <strong>Notifications</strong>
+              <span>{history.length} saved</span>
+            </div>
+            <button type="button" onClick={clearAllNotifications} aria-label="Clear all notifications" title="Clear all">
+              <X size={17} />
+            </button>
+          </header>
+          <div className="voicedocs-notification-history-list">
+            {history.length === 0 ? (
+              <p className="voicedocs-notification-empty">No notifications yet.</p>
+            ) : history.map((item) => (
+              <div className="voicedocs-history-item" key={item.id}>
+                <span className={`voicedocs-history-icon voicedocs-history-icon-${item.type}`}>{notificationIcon(item.type)}</span>
+                <div>
+                  <strong>{item.title}</strong>
+                  {item.message && <p>{item.message}</p>}
+                  {item.documentTitle && <small>{item.documentTitle}</small>}
+                  <time>{item.createdAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</time>
+                </div>
+                <button
+                  type="button"
+                  aria-label="Remove notification"
+                  onClick={() => {
+                    setHistory((current) => current.filter((entry) => entry.id !== item.id))
+                    setVisibleIds((current) => current.filter((id) => id !== item.id))
+                  }}
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       <button
         type="button"
-        onClick={() => {
-          if (notification.documentId) navigate(`/documents/${notification.documentId}`)
-          setNotification(null)
-        }}
+        className={`voicedocs-notification-bell${isHistoryOpen ? ' is-open' : ''}`}
+        onClick={() => setIsHistoryOpen((current) => !current)}
+        aria-label={isHistoryOpen ? 'Close notifications' : 'Open notifications'}
+        aria-expanded={isHistoryOpen}
       >
-        Open document
+        <Bell size={20} />
+        {history.length > 0 && <span>{history.length > 99 ? '99+' : history.length}</span>}
       </button>
-    </aside>
+    </div>
   )
 }
