@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
+import './BackgroundDraftNotification.css'
 import { AlertCircle, Bell, CheckCircle2, FileText, Info, LoaderCircle, X } from 'lucide-react'
 
 const DISMISS_AFTER_MS = 5000
@@ -9,7 +10,6 @@ export default function BackgroundDraftNotification() {
   const [history, setHistory] = useState([])
   const [visibleIds, setVisibleIds] = useState([])
   const [isHistoryOpen, setIsHistoryOpen] = useState(false)
-  const location = useLocation()
   const navigate = useNavigate()
 
   const visibleNotifications = useMemo(
